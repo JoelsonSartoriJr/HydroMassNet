@@ -1,17 +1,16 @@
-
 [English](#english) | [Português](#português) | [Español](#español)
 
 ---
 
-## English
+## Español
 
 # HydroMassNet
 
-HydroMassNet is a project aimed at creating Bayesian neural networks to identify the percentage of neutral hydrogen mass in galaxies.
+HydroMassNet es un proyecto destinado a crear redes neuronales Bayesianas para identificar el porcentaje de masa de hidrógeno neutro en galaxias.
 
-### Prerequisites
+### Requisitos Previos
 
-- Python 3.8 or higher
+- Python 3.8 o superior
 - Poetry
 - TensorFlow
 - TensorFlow Probability
@@ -19,58 +18,59 @@ HydroMassNet is a project aimed at creating Bayesian neural networks to identify
 - Matplotlib
 - Seaborn
 
-### Installation
+### Instalación
 
-You can install the dependencies using Poetry or pip.
+Puede instalar las dependencias usando Poetry o pip.
 
-#### Using Poetry
+#### Usando Poetry
 
-1. Clone the repository:
+1. Clone el repositorio:
     ```bash
     git clone https://github.com/joelsonsartori/HydroMassNet.git
     cd HydroMassNet
     ```
 
-2. Install dependencies using Poetry:
+2. Instale las dependencias usando Poetry:
     ```bash
     poetry install
     ```
 
-#### Using pip
+#### Usando pip
 
-1. Clone the repository:
+1. Clone el repositorio:
     ```bash
     git clone https://github.com/joelsonsartori/HydroMassNet.git
     cd HydroMassNet
     ```
 
-2. Create and activate a virtual environment (optional but recommended):
+2. Cree y active un entorno virtual (opcional pero recomendado):
     ```bash
     python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    source venv/bin/activate  # En Windows use `venv\Scripts\activate`
     ```
 
-3. Install dependencies using pip:
+3. Instale las dependencias usando pip:
     ```bash
     pip install -r requirements.txt
     ```
 
-### Usage
+### Uso
 
-1. Run the `bayesian_model.py` script:
+1. Ejecute el script `bayesian_model.py`:
     ```bash
-    poetry run python model/bayesian_model.py  # If using Poetry
+    poetry run python model/bayesian_model.py  # Si está usando Poetry
     ```
 
-    or
+    o
 
     ```bash
-    python model/bayesian_model.py  # If using pip
+    python model/bayesian_model.py  # Si está usando pip
     ```
 
-2. Check the generated plots in the project directory.
+2. Verifique los gráficos generados en el directorio del proyecto.
 
-### Project Structure
+### Estructura del Proyecto
+
 HydroMassNet/
 ├── data/
 │ └── cleaning_data_test.csv
@@ -88,6 +88,6 @@ HydroMassNet/
 └── requirements.txt
 
 
-### Contact
+### Contacto
 
 Joelson Sartori Junior - [joelsonsartori@gmail.com](mailto:joelsonsartori@gmail.com)
