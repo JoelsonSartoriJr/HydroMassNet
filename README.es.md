@@ -1,8 +1,7 @@
-[English](#english) | [Português](#português) | [Español](#español)
-
----
-
 ## Español
+
+[![English](https://img.shields.io/badge/lang-English-blue)](README.md)
+[![Português](https://img.shields.io/badge/lang-Português-green)](README.pt.md)
 
 # HydroMassNet
 
