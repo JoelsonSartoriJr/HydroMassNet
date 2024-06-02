@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "hydromassnet"
+version = "0.1.0"
+description = "This project focuses on developing Bayesian neural networks to identify the percentage of neutral hydrogen mass in galaxies."
+authors = ["Joelson Sartori Junior <joelsonsartori@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.2.2"
+scikit-learn = "^1.5.0"
+catboost = "^1.2.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
