@@ -69,23 +69,22 @@ Puede instalar las dependencias usando Poetry o pip.
 2. Verifique los gráficos generados en el directorio del proyecto.
 
 ### Estructura del Proyecto
-
-HydroMassNet
-├── data
-│   ├── cleaning_data_test.csv
-├── func
-│   ├── data_preprocessing.py
-├── model
-│   ├── model
-│       ├── bayesian_dense_layer.py
-│       ├── bayesian_dense_network.py
-│       └── bayesian_dense_regression.py
-│   ├── bayesian_density_network.py
-│   └── bayesian_model.py
-├── README.md
-├── poetry.lock
-├── pyproject.toml
-└── requirements.txt
+    .
+    ├── data
+    │   ├── cleaning_data_test.csv
+    ├── func
+    │   ├── data_preprocessing.py
+    ├── model
+    │   ├── model
+    │       ├── bayesian_dense_layer.py
+    │       ├── bayesian_dense_network.py
+    │       └── bayesian_dense_regression.py
+    │   ├── bayesian_density_network.py
+    │   └── bayesian_model.py
+    ├── README.md
+    ├── poetry.lock
+    ├── pyproject.toml
+    └── requirements.txt
 
 
 ### Contacto
