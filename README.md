@@ -68,6 +68,7 @@ You can install the dependencies using Poetry or pip.
 
 2. Check the generated plots in the project directory.
 
+### Project Structure
     .
     ├── data
     │   ├── cleaning_data_test.csv
