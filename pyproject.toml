@@ -14,6 +14,7 @@ catboost = "^1.2.5"
 seaborn = "^0.13.2"
 tensorflow = "^2.16.1"
 keras = "^3.3.3"
+tensorflow-probability = { extras = ["tf"], version = "^0.24.0" }
 
 
 [build-system]
