@@ -25,7 +25,7 @@ def print_model_summary(model, input_shape):
     for layer in model.layers:
         print(f"Layer: {layer.name}, Trainable: {layer.trainable}")
 
-def train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, model_name):
+def train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, model_name, scaler_y_fit):
     shape = x_train.shape[1]
     model = BayesianDenseRegression([shape, 256, 128, 64, 32, 1])
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -49,6 +49,7 @@ def train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size
 
     elbo = np.zeros(epochs)
     mae = np.zeros(epochs)
+    accuracy = np.zeros(epochs)
     for epoch in range(epochs):
         for x_data, y_data in tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(10000).batch(batch_size):
             elbo[epoch] = train_step(x_data, y_data)
@@ -56,6 +57,9 @@ def train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size
         for x_data, y_data in tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(x_val.shape[0]):
             y_pred = model(x_data, sampling=False)[:, 0]
             mae[epoch] = mean_absolute_error(y_pred, y_data)
+            y_val_real = scaler_y_fit.inverse_transform(y_val).flatten()
+            y_pred_real = scaler_y_fit.inverse_transform(y_pred.numpy().reshape(-1, 1)).flatten()
+            accuracy[epoch] = np.mean(np.abs(y_pred_real[:len(y_val_real)] - y_val_real) <= 0.1 * y_val_real) * 100
 
     plt.plot(elbo)
     plt.xlabel('Epoch')
@@ -69,9 +73,15 @@ def train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size
     plt.savefig(f'{model_name}_Mae.png')
     plt.show()
 
+    plt.plot(accuracy)
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.savefig(f'{model_name}_Accuracy.png')
+    plt.show()
+
     return model
 
-def train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, model_name):
+def train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, model_name, scaler_y_fit):
     shape = x_train.shape[1]
     model = BayesianDensityNetwork([shape, 256, 128], [64, 32, 1])
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -95,6 +105,7 @@ def train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch
 
     elbo = np.zeros(epochs)
     mae = np.zeros(epochs)
+    accuracy = np.zeros(epochs)
     for epoch in range(epochs):
         for x_data, y_data in tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(10000).batch(batch_size):
             elbo[epoch] = train_step(x_data, y_data)
@@ -102,6 +113,9 @@ def train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch
         for x_data, y_data in tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(x_val.shape[0]):
             y_pred = model(x_data, sampling=False)[:, 0]
             mae[epoch] = mean_absolute_error(y_pred, y_data)
+            y_val_real = scaler_y_fit.inverse_transform(y_val).flatten()
+            y_pred_real = scaler_y_fit.inverse_transform(y_pred.numpy().reshape(-1, 1)).flatten()
+            accuracy[epoch] = np.mean(np.abs(y_pred_real[:len(y_val_real)] - y_val_real) <= 0.1 * y_val_real) * 100
 
     plt.plot(elbo)
     plt.xlabel('Epoch')
@@ -113,6 +127,12 @@ def train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch
     plt.xlabel('Epoch')
     plt.ylabel('Mean Absolute Error')
     plt.savefig(f'{model_name}_Mae.png')
+    plt.show()
+
+    plt.plot(accuracy)
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.savefig(f'{model_name}_Accuracy.png')
     plt.show()
 
     return model
@@ -240,6 +260,27 @@ def compute_coverage_and_errors(model1, model2, x_val, y_val, scaler_x_fit, scal
     plt.savefig('realVSpreditoDBNN.png')
     plt.show()
 
+def plot_accuracy(model1, model2, x_val, y_val, scaler_y_fit):
+    preds1 = model1(x_val, sampling=False).numpy().flatten()
+    preds2 = model2(x_val, sampling=False).numpy().flatten()
+
+    y_val_real = scaler_y_fit.inverse_transform(y_val).flatten()
+    preds1_real = scaler_y_fit.inverse_transform(preds1.reshape(-1, 1)).flatten()
+    preds2_real = scaler_y_fit.inverse_transform(preds2.reshape(-1, 1)).flatten()
+
+    accuracy1 = np.mean(np.abs(preds1_real[:len(y_val_real)] - y_val_real) <= 0.1 * y_val_real) * 100
+    accuracy2 = np.mean(np.abs(preds2_real[:len(y_val_real)] - y_val_real) <= 0.1 * y_val_real) * 100
+
+    plt.figure(figsize=(10, 5))
+    plt.bar(['BNN', 'DBNN'], [accuracy1, accuracy2], color=['blue', 'orange'])
+    plt.ylabel('Accuracy (%)', fontsize=20)
+    plt.title('Model Accuracy', fontsize=24)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.ylim(0, 100)
+    plt.savefig('model_accuracy.png')
+    plt.show()
+
 if __name__ == "__main__":
     data_path = os.path.join(project_root, 'data', 'cleaning_data_test.csv')
     val_split = 0.2
@@ -251,8 +292,8 @@ if __name__ == "__main__":
     data_scaled_x, data_scaled_y, scaler_x_fit, scaler_y_fit = load_and_preprocess_data(data_path)
     x_train, y_train, x_val, y_val = split_data(data_scaled_x, data_scaled_y, val_split, seed)
 
-    bnn_model = train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, "BNN")
-    dbnn_model = train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, "DBNN")
+    bnn_model = train_bayesian_regression(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, "BNN", scaler_y_fit)
+    dbnn_model = train_bayesian_density_network(x_train, y_train, x_val, y_val, epochs, batch_size, learning_rate, val_split, "DBNN", scaler_y_fit)
 
     data_val = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(x_val.shape[0])
     make_predictions_and_plot_residuals(bnn_model, dbnn_model, data_val, scaler_y_fit)
