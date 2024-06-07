@@ -16,6 +16,7 @@ tensorflow = "^2.16.1"
 keras = "^3.3.3"
 tensorflow-probability = { extras = ["tf"], version = "^0.24.0" }
 numpy = "^1.26.4"
+tqdm = "^4.66.4"
 
 
 [build-system]

@@ -1,26 +1,29 @@
-import numpy as np
 import tensorflow as tf
+import numpy as np
 import tensorflow_probability as tfp
-from model.bayesian_dense_network import BayesianDenseNetwork
+from model.bayesian_dense_network_regression import BayesianDenseNetworkForRegression
 
 tfd = tfp.distributions
 
 class BayesianDenseRegression(tf.keras.Model):
     def __init__(self, dims, name=None):
         super(BayesianDenseRegression, self).__init__(name=name)
-        self.loc_net = BayesianDenseNetwork(dims)
-        self.std_alpha = self.add_weight(name='std_alpha', shape=[1], initializer='ones', trainable=True)
-        self.std_beta = self.add_weight(name='std_beta', shape=[1], initializer='ones', trainable=True)
+        self.loc_net = BayesianDenseNetworkForRegression(dims, [1])
+        self.std_alpha = tf.Variable([10.0], name='std_alpha')
+        self.std_beta = tf.Variable([10.0], name='std_beta')
+
+    def transform_std(self, x):
+        """Transforma a previsão do desvio padrão usando a distribuição Gamma."""
+        return tf.sqrt(tf.math.reciprocal(x))
 
     def call(self, x, sampling=True):
         loc_preds = self.loc_net(x, sampling=sampling)
         posterior = tfd.Gamma(self.std_alpha, self.std_beta)
-        transform = lambda x: tf.sqrt(tf.math.reciprocal(x))
         N = x.shape[0]
         if sampling:
-            std_preds = transform(posterior.sample([N]))
+            std_preds = self.transform_std(posterior.sample([N]))
         else:
-            std_preds = tf.ones([N, 1]) * transform(posterior.mean())
+            std_preds = tf.ones([N, 1]) * self.transform_std(posterior.mean())
         return tf.concat([loc_preds, std_preds], 1)
 
     def log_likelihood(self, x, y, sampling=True):
@@ -40,7 +43,7 @@ class BayesianDenseRegression(tf.keras.Model):
 
     @property
     def losses(self):
-        net_loss = self.loc_net.losses
+        net_loss = self.loc_net.kl_loss
         posterior = tfd.Gamma(self.std_alpha, self.std_beta)
         prior = tfd.Gamma(10.0, 10.0)
         std_loss = tfd.kl_divergence(posterior, prior)
