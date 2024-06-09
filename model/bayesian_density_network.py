@@ -1,42 +1,39 @@
 import tensorflow as tf
-from model.bayesian_dense_layer import BayesianDenseLayer
 import tensorflow_probability as tfp
+from model.bayesian_dense_network import BayesianDenseNetwork
 
 tfd = tfp.distributions
 
 class BayesianDensityNetwork(tf.keras.Model):
-    def __init__(self, layer_dims, output_dims, name=None):
+    def __init__(self, core_dims, head_dims, name=None):
         super(BayesianDensityNetwork, self).__init__(name=name)
-
-        self.steps = []
-        self.acts = []
-
-        # Inicializa as camadas escondidas e suas funções de ativação
-        for i in range(len(layer_dims) - 1):
-            self.steps.append(BayesianDenseLayer(layer_dims[i], layer_dims[i + 1]))
-            self.acts.append(tf.nn.relu)
-
-        # Inicializa as camadas de saída e suas funções de ativação
-        for i in range(len(output_dims) - 1):
-            self.steps.append(BayesianDenseLayer(output_dims[i], output_dims[i + 1]))
-            self.acts.append(tf.nn.relu)
-
-        # Última camada sem função de ativação
-        self.acts[-1] = lambda x: x
+        self.core_net = BayesianDenseNetwork(core_dims)
+        self.loc_net = BayesianDenseNetwork([core_dims[-1]] + head_dims)
+        self.std_net = BayesianDenseNetwork([core_dims[-1]] + head_dims)
 
     def call(self, x, sampling=True):
-        """Realiza a propagação direta na rede."""
-        for step, act in zip(self.steps, self.acts):
-            x = step(x, sampling=sampling)
-            x = act(x)
-        return x
+        x = self.core_net(x, sampling=sampling)
+        x = tf.nn.relu(x)
+        loc_preds = self.loc_net(x, sampling=sampling)
+        std_preds = self.std_net(x, sampling=sampling)
+        std_preds = tf.nn.softplus(std_preds)
+        return tf.concat([loc_preds, std_preds], 1)
+
+    def log_likelihood(self, x, y, sampling=True):
+        preds = self.call(x, sampling=sampling)
+        return tfd.Normal(preds[:, 0], preds[:, 1]).log_prob(y[:, 0])
+
+    @tf.function
+    def sample(self, x):
+        preds = self.call(x)
+        return tfd.Normal(preds[:, 0], preds[:, 1]).sample()
+
+    def samples(self, x, n_samples=1):
+        samples = np.zeros((x.shape[0], n_samples))
+        for i in range(n_samples):
+            samples[:, i] = self.sample(x)
+        return samples
 
     @property
-    def kl_loss(self):
-        """Calcula a perda de divergência KL para todas as camadas."""
-        return tf.reduce_sum([layer.losses for layer in self.steps])
-
-    def log_likelihood(self, x, y):
-        """Calcula a log-verossimilhança dos dados."""
-        y_pred = self(x, sampling=False)
-        return tf.reduce_mean(tfd.Normal(y_pred, 1).log_prob(y))
+    def losses(self):
+        return self.core_net.losses + self.loc_net.losses + self.std_net.losses
