@@ -4,9 +4,13 @@ from model.bayesian_dense_layer import BayesianDenseLayer
 class BayesianDenseNetwork(tf.keras.Model):
     def __init__(self, layer_dims, name=None):
         super(BayesianDenseNetwork, self).__init__(name=name)
+        self.layer_dims = layer_dims
         self.steps = []
-        for i in range(len(layer_dims) - 1):
-            self.steps.append(BayesianDenseLayer(layer_dims[i], layer_dims[i + 1]))
+
+    def build(self, input_shape):
+        for i in range(len(self.layer_dims) - 1):
+            self.steps.append(BayesianDenseLayer(self.layer_dims[i], self.layer_dims[i + 1]))
+        super(BayesianDenseNetwork, self).build(input_shape)
 
     def call(self, x, sampling=True):
         for step in self.steps:

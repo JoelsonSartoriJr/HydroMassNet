@@ -4,33 +4,59 @@ import numpy as np
 def plot_metrics(elbo, mae, r2, model_name):
     epochs = range(1, len(elbo) + 1)
 
-    plt.figure(figsize=(18, 5))
-
     # Plot ELBO
-    plt.subplot(1, 3, 1)
+    plt.figure()
     plt.plot(epochs, elbo, 'b', label='ELBO')
     plt.title(f'ELBO during training for {model_name}')
     plt.xlabel('Epochs')
     plt.ylabel('ELBO')
     plt.legend()
+    plt.savefig(f'{model_name}_ELBO.png')
+    plt.show()
 
     # Plot MAE
-    plt.subplot(1, 3, 2)
+    plt.figure()
     plt.plot(epochs, mae, 'r', label='MAE')
     plt.title(f'MAE during training for {model_name}')
     plt.xlabel('Epochs')
     plt.ylabel('MAE')
     plt.legend()
+    plt.savefig(f'{model_name}_MAE.png')
+    plt.show()
 
     # Plot R²
-    plt.subplot(1, 3, 3)
+    plt.figure()
     plt.plot(epochs, r2, 'g', label='R²')
     plt.title(f'R² during training for {model_name}')
     plt.xlabel('Epochs')
     plt.ylabel('R²')
     plt.legend()
+    plt.savefig(f'{model_name}_R2.png')
+    plt.show()
 
-    plt.tight_layout()
+def plot_accuracy(accuracy, model_name):
+    epochs = range(1, len(accuracy) + 1)
+
+    plt.figure()
+    plt.plot(epochs, accuracy, label=f'Accuracy {model_name}')
+    plt.title(f'Accuracy during training for {model_name}')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy (%)')
+    plt.legend()
+    plt.savefig(f'{model_name}_Accuracy.png')
+    plt.show()
+
+def plot_accuracy_comparison(accuracy_bnn, accuracy_dbnn):
+    epochs = range(1, len(accuracy_bnn) + 1)
+
+    plt.figure()
+    plt.plot(epochs, accuracy_bnn, label='BNN Accuracy', color='blue')
+    plt.plot(epochs, accuracy_dbnn, label='DBNN Accuracy', color='green')
+    plt.title('Accuracy Comparison between BNN and DBNN')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy (%)')
+    plt.legend()
+    plt.savefig('Accuracy_Comparison.png')
     plt.show()
 
 def make_predictions_and_plot_residuals(model1, model2, data_val, scaler_y_fit):
@@ -42,26 +68,42 @@ def make_predictions_and_plot_residuals(model1, model2, data_val, scaler_y_fit):
         preds2_real = scaler_y_fit.inverse_transform(preds2[:, 0].reshape(-1, 1))
         y_val_real = scaler_y_fit.inverse_transform(y_data.numpy().reshape(-1, 1))
 
-        resids1 = y_val_real - preds1_real
-        resids2 = y_val_real - preds2_real
+        resids1 = (preds1_real - y_val_real).flatten()
+        resids2 = (preds2_real - y_val_real).flatten()
 
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(16, 7))
 
         plt.subplot(1, 2, 1)
-        plt.scatter(y_val_real, resids1, alpha=0.5, label='BNN')
-        plt.hlines(0, min(y_val_real), max(y_val_real), colors='r')
-        plt.xlabel('True values')
-        plt.ylabel('Residuals')
-        plt.legend()
+        plt.plot(y_val_real.flatten(), y_val_real.flatten(), color='green', zorder=3)
+        plt.errorbar(y_val_real.flatten(), preds1_real.flatten(), yerr=np.abs(resids1), fmt="o", alpha=0.7, markersize=5, capsize=3, color='blue', ecolor='lightgray', elinewidth=2)
+        plt.scatter(y_val_real.flatten(), preds1_real.flatten(), zorder=3, alpha=0.7, color='blue')
+        plt.xlabel(r'True values ($log(M_{\odot})$)', fontsize=24)
+        plt.ylabel(r'Predict values ($log(M_{\odot})$)', fontsize=24)
+        plt.xticks(fontsize=22)
+        plt.yticks(fontsize=22)
+        plt.xlim(8.5, 10.7)
+        plt.ylim(7, 12)
+        plt.title('True vs Predicted for BNN')
+        plt.grid(True)
+        plt.legend(['Ideal', 'Predictions'], fontsize=16)
+        plt.savefig('realVSpreditoBNN.png')
 
         plt.subplot(1, 2, 2)
-        plt.scatter(y_val_real, resids2, alpha=0.5, label='DBNN')
-        plt.hlines(0, min(y_val_real), max(y_val_real), colors='r')
-        plt.xlabel('True values')
-        plt.ylabel('Residuals')
-        plt.legend()
+        plt.plot(y_val_real.flatten(), y_val_real.flatten(), color='green', zorder=3)
+        plt.errorbar(y_val_real.flatten(), preds2_real.flatten(), yerr=np.abs(resids2), fmt="o", alpha=0.7, markersize=5, capsize=3, color='red', ecolor='lightgray', elinewidth=2)
+        plt.scatter(y_val_real.flatten(), preds2_real.flatten(), zorder=3, alpha=0.7, color='red')
+        plt.xlabel(r'True values ($log(M_{\odot})$)', fontsize=24)
+        plt.ylabel(r'Predict values ($log(M_{\odot})$)', fontsize=24)
+        plt.xticks(fontsize=22)
+        plt.yticks(fontsize=22)
+        plt.xlim(8.5, 10.7)
+        plt.ylim(7, 12)
+        plt.title('True vs Predicted for DBNN')
+        plt.grid(True)
+        plt.legend(['Ideal', 'Predictions'], fontsize=16)
+        plt.savefig('realVSpreditoDBNN.png')
 
-        plt.suptitle('Residuals')
+        plt.suptitle('True vs Predicted Values and Error Rates', fontsize=26)
         plt.tight_layout()
         plt.show()
 
@@ -77,20 +119,24 @@ def plot_predictive_distributions(model1, model2, data_val, scaler_y_fit):
         plt.figure(figsize=(12, 6))
 
         plt.subplot(1, 2, 1)
-        plt.hist(preds1_real, bins=50, alpha=0.5, label='BNN', density=True)
-        plt.hist(y_val_real, bins=50, alpha=0.5, label='True', density=True)
+        plt.hist(preds1_real, bins=50, alpha=0.5, label='BNN', density=True, color='blue')
+        plt.hist(y_val_real, bins=50, alpha=0.5, label='True', density=True, color='red')
         plt.xlabel('Predicted values')
         plt.ylabel('Density')
         plt.legend()
+        plt.title('Predictive Distribution for BNN')
+        plt.savefig('Predictive_Distribution_BNN.png')
 
         plt.subplot(1, 2, 2)
-        plt.hist(preds2_real, bins=50, alpha=0.5, label='DBNN', density=True)
-        plt.hist(y_val_real, bins=50, alpha=0.5, label='True', density=True)
+        plt.hist(preds2_real, bins=50, alpha=0.5, label='DBNN', density=True, color='green')
+        plt.hist(y_val_real, bins=50, alpha=0.5, label='True', density=True, color='red')
         plt.xlabel('Predicted values')
         plt.ylabel('Density')
         plt.legend()
+        plt.title('Predictive Distribution for DBNN')
+        plt.savefig('Predictive_Distribution_DBNN.png')
 
-        plt.suptitle('Predictive Distributions')
+        plt.suptitle('Predictive Distributions', fontsize=20)
         plt.tight_layout()
         plt.show()
 
@@ -108,32 +154,15 @@ def compute_coverage_and_errors(model1, model2, x_val, y_val, scaler_x_fit, scal
     print(f'Coverage for BNN: {coverage1:.2f}%')
     print(f'Coverage for DBNN: {coverage2:.2f}%')
 
-def plot_accuracy(bnn_model, dbnn_model, x_val, y_val, scaler_y_fit):
-    y_pred1 = bnn_model(x_val, sampling=False).numpy()
-    y_pred2 = dbnn_model(x_val, sampling=False).numpy()
-
-    y_pred1_real = scaler_y_fit.inverse_transform(y_pred1[:, 0].reshape(-1, 1))
-    y_pred2_real = scaler_y_fit.inverse_transform(y_pred2[:, 0].reshape(-1, 1))
-    y_val_real = scaler_y_fit.inverse_transform(y_val.reshape(-1, 1))
-
-    accuracy1 = np.mean((np.abs(y_pred1_real - y_val_real) / y_val_real) <= 0.1) * 100
-    accuracy2 = np.mean((np.abs(y_pred2_real - y_val_real) / y_val_real) <= 0.1) * 100
-
-    plt.figure(figsize=(12, 6))
-    plt.bar(['BNN', 'DBNN'], [accuracy1, accuracy2])
-    plt.ylabel('Accuracy (%)')
-    plt.title('Accuracy Comparison between BNN and DBNN')
-    plt.ylim([0, 100])
-    plt.show()
-
 def plot_error(mae1, mae2, epochs):
     epochs_range = range(1, epochs + 1)
 
-    plt.figure(figsize=(12, 6))
-    plt.plot(epochs_range, mae1, label='BNN MAE')
-    plt.plot(epochs_range, mae2, label='DBNN MAE')
+    plt.figure()
+    plt.plot(epochs_range, mae1, label='BNN MAE', color='blue')
+    plt.plot(epochs_range, mae2, label='DBNN MAE', color='green')
     plt.xlabel('Epochs')
     plt.ylabel('MAE')
     plt.legend()
     plt.title('MAE Comparison between BNN and DBNN')
+    plt.savefig('MAE_Comparison.png')
     plt.show()

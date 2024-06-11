@@ -25,7 +25,10 @@ def train_bayesian_regression(layer_dims, x_train, y_train, x_val, y_val, epochs
         with tf.GradientTape() as tape:
             log_likelihoods = model.log_likelihood(x_data, y_data)
             kl_loss = model.losses
-            elbo_loss = kl_loss / x_data.shape[0] - tf.reduce_mean(log_likelihoods)
+            if x_data.shape[0] == 0:  # Adicionando verificação para evitar divisão por zero
+                elbo_loss = tf.constant(np.inf)
+            else:
+                elbo_loss = kl_loss / x_data.shape[0] - tf.reduce_mean(log_likelihoods)
         gradients = tape.gradient(elbo_loss, model.trainable_variables)
         if gradients and all(g is not None for g in gradients):
             optimizer.apply_gradients(zip(gradients, model.trainable_variables))
@@ -68,7 +71,10 @@ def train_bayesian_density_network(core_dims, head_dims, x_train, y_train, x_val
         with tf.GradientTape() as tape:
             log_likelihoods = model.log_likelihood(x_data, y_data)
             kl_loss = model.losses
-            elbo_loss = kl_loss / x_data.shape[0] - tf.reduce_mean(log_likelihoods)
+            if x_data.shape[0] == 0:  # Adicionando verificação para evitar divisão por zero
+                elbo_loss = tf.constant(np.inf)
+            else:
+                elbo_loss = kl_loss / x_data.shape[0] - tf.reduce_mean(log_likelihoods)
         gradients = tape.gradient(elbo_loss, model.trainable_variables)
         if gradients and all(g is not None for g in gradients):
             optimizer.apply_gradients(zip(gradients, model.trainable_variables))

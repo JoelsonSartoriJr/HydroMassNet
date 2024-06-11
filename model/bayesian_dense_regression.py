@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import tensorflow_probability as tfp
 from model.bayesian_dense_network import BayesianDenseNetwork
 
@@ -7,9 +8,14 @@ tfd = tfp.distributions
 class BayesianDenseRegression(tf.keras.Model):
     def __init__(self, layer_dims, name=None):
         super(BayesianDenseRegression, self).__init__(name=name)
+        self.layer_dims = layer_dims
         self.loc_net = BayesianDenseNetwork(layer_dims)
         self.std_alpha = tf.Variable([10.0], name='std_alpha')
         self.std_beta = tf.Variable([10.0], name='std_beta')
+
+    def build(self, input_shape):
+        self.loc_net.build(input_shape)
+        super(BayesianDenseRegression, self).build(input_shape)
 
     def call(self, x, sampling=True):
         loc_preds = self.loc_net(x, sampling=sampling)

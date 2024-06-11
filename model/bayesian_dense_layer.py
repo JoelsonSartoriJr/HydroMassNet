@@ -7,10 +7,19 @@ tfd = tfp.distributions
 class BayesianDenseLayer(tf.keras.layers.Layer):
     def __init__(self, d_in, d_out, name=None):
         super(BayesianDenseLayer, self).__init__(name=name)
-        self.w_loc = self.add_weight(name='w_loc', shape=[d_in, d_out], initializer=xavier)
-        self.w_std = self.add_weight(name='w_std', shape=[d_in, d_out], initializer=tf.constant_initializer(-6.0))
-        self.b_loc = self.add_weight(name='b_loc', shape=[1, d_out], initializer=xavier)
-        self.b_std = self.add_weight(name='b_std', shape=[1, d_out], initializer=tf.constant_initializer(-6.0))
+        self.d_in = d_in
+        self.d_out = d_out
+        self.w_loc = None
+        self.w_std = None
+        self.b_loc = None
+        self.b_std = None
+
+    def build(self, input_shape):
+        self.w_loc = self.add_weight(name='w_loc', shape=[self.d_in, self.d_out], initializer=xavier)
+        self.w_std = self.add_weight(name='w_std', shape=[self.d_in, self.d_out], initializer=tf.constant_initializer(-6.0))
+        self.b_loc = self.add_weight(name='b_loc', shape=[1, self.d_out], initializer=xavier)
+        self.b_std = self.add_weight(name='b_std', shape=[1, self.d_out], initializer=tf.constant_initializer(-6.0))
+        super(BayesianDenseLayer, self).build(input_shape)
 
     @property
     def weight(self):

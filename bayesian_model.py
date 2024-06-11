@@ -5,7 +5,7 @@ import tensorflow as tf
 import logging
 from func.data_preprocessing import load_and_preprocess_data, split_data
 from func.train import train_bayesian_regression, train_bayesian_density_network
-from func.plot import make_predictions_and_plot_residuals, plot_predictive_distributions, compute_coverage_and_errors, plot_accuracy, plot_error
+from func.plot import make_predictions_and_plot_residuals, plot_predictive_distributions, compute_coverage_and_errors, plot_accuracy_comparison, plot_error
 
 # Suprimir avisos de "End of sequence"
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
@@ -30,8 +30,8 @@ def main():
     val_split = 0.2
     seed = 1601
     batch_size = 256  # Ajuste no tamanho do lote
-    epochs = 300  # Ajuste no número de épocas
-    learning_rate = 1e-4  # Ajuste na taxa de aprendizado
+    epochs = 600  # Ajuste no número de épocas
+    learning_rate = 1e-5  # Ajuste na taxa de aprendizado
     weight_decay = 1e-6  # Adicionando weight decay
 
     # Carregar e pré-processar os dados
@@ -56,8 +56,8 @@ def main():
     # Calcular cobertura e erros
     compute_coverage_and_errors(bnn_model, dbnn_model, x_val, y_val, scaler_x_fit, scaler_y_fit)
 
-    # Plotar acurácia dos modelos
-    plot_accuracy(bnn_model, dbnn_model, x_val, y_val, scaler_y_fit)
+    # Plotar comparação de acurácia entre os modelos
+    plot_accuracy_comparison(bnn_r2, dbnn_r2)  # Ajustado para usar r2 como proxy para accuracy
 
     # Plotar erro absoluto médio dos modelos
     plot_error(bnn_mae, dbnn_mae, epochs)
