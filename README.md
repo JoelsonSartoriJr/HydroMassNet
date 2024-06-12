@@ -65,66 +65,30 @@ You can install the dependencies using Poetry or pip.
     ```bash
     python bayesian_model.py  # If using pip
     ```
+    
+2. Run the `baseline.py` script:
+    ```bash
+    poetry run python baseline.py  # If using Poetry
+    ```
 
-2. Check the generated plots in the project directory.
+    or
 
-### Project Structure
+    ```bash
+    python baseline.py  # If using pip
+    ```
 
-.
-├── BNN_Accuracy.png
-├── BNN_Elbo.png
-├── BNN_Mae.png
-├── BNN_model.h5
-├── BNN_model.keras
-├── DBNN_Accuracy.png
-├── DBNN_Elbo.png
-├── DBNN_Mae.png
-├── DBNN_model.h5
-├── DBNN_model.keras
-├── LICENSE
-├── README.es.md
-├── README.md
-├── README.pt.md
-├── Residuo.png
-├── baseline.py
-├── bayesian_model.py
-├── class
-│ └── lr_history.py
-├── data
-│ ├── cleaning_data.csv
-│ ├── cleaning_data_test.csv
-│ └── data.csv
-├── func
-│ ├── pycache
-│ │ ├── data_preprocessing.cpython-312.pyc
-│ │ ├── plot.cpython-312.pyc
-│ │ ├── train.cpython-312.pyc
-│ │ └── utils.cpython-312.pyc
-│ ├── data_preprocessing.py
-│ ├── plot.py
-│ ├── set_seed.py
-│ ├── train.py
-│ └── utils.py
-├── model
-│ ├── pycache
-│ │ ├── bayesian_dense_layer.cpython-312.pyc
-│ │ ├── bayesian_dense_network.cpython-312.pyc
-│ │ ├── bayesian_dense_regression.cpython-312.pyc
-│ │ └── bayesian_density_network.cpython-312.pyc
-│ ├── bayesian_dense_layer.py
-│ ├── bayesian_dense_network.py
-│ ├── bayesian_dense_regression.py
-│ └── bayesian_density_network.py
-├── model_accuracy.png
-├── poetry.lock
-├── pred_bnn.png
-├── predict.py
-├── pyproject.toml
-├── realVSpreditoBNN.png
-├── realVSpreditoDBNN.png
-├── requirements.txt
-└── vanilla.py
+3. Run the `vanilla.py` script:
+    ```bash
+    poetry run python vanilla.py  # If using Poetry
+    ```
 
+    or
+
+    ```bash
+    python vanilla.py  # If using pip
+    ```
+
+4. Check the generated plots in the project directory.
 
 ### Contact
 
