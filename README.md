@@ -57,34 +57,74 @@ You can install the dependencies using Poetry or pip.
 
 1. Run the `bayesian_model.py` script:
     ```bash
-    poetry run python model/bayesian_model.py  # If using Poetry
+    poetry run python bayesian_model.py  # If using Poetry
     ```
 
     or
 
     ```bash
-    python model/bayesian_model.py  # If using pip
+    python bayesian_model.py  # If using pip
     ```
 
 2. Check the generated plots in the project directory.
 
 ### Project Structure
-    .
-    ├── data
-    │   ├── cleaning_data_test.csv
-    ├── func
-    │   ├── data_preprocessing.py
-    ├── model
-    │   ├── model
-    │       ├── bayesian_dense_layer.py
-    │       ├── bayesian_dense_network.py
-    │       └── bayesian_dense_regression.py
-    │   ├── bayesian_density_network.py
-    │   └── bayesian_model.py
-    ├── README.md
-    ├── poetry.lock
-    ├── pyproject.toml
-    └── requirements.txt
+
+.
+├── BNN_Accuracy.png
+├── BNN_Elbo.png
+├── BNN_Mae.png
+├── BNN_model.h5
+├── BNN_model.keras
+├── DBNN_Accuracy.png
+├── DBNN_Elbo.png
+├── DBNN_Mae.png
+├── DBNN_model.h5
+├── DBNN_model.keras
+├── LICENSE
+├── README.es.md
+├── README.md
+├── README.pt.md
+├── Residuo.png
+├── baseline.py
+├── bayesian_model.py
+├── class
+│ └── lr_history.py
+├── data
+│ ├── cleaning_data.csv
+│ ├── cleaning_data_test.csv
+│ └── data.csv
+├── func
+│ ├── pycache
+│ │ ├── data_preprocessing.cpython-312.pyc
+│ │ ├── plot.cpython-312.pyc
+│ │ ├── train.cpython-312.pyc
+│ │ └── utils.cpython-312.pyc
+│ ├── data_preprocessing.py
+│ ├── plot.py
+│ ├── set_seed.py
+│ ├── train.py
+│ └── utils.py
+├── model
+│ ├── pycache
+│ │ ├── bayesian_dense_layer.cpython-312.pyc
+│ │ ├── bayesian_dense_network.cpython-312.pyc
+│ │ ├── bayesian_dense_regression.cpython-312.pyc
+│ │ └── bayesian_density_network.cpython-312.pyc
+│ ├── bayesian_dense_layer.py
+│ ├── bayesian_dense_network.py
+│ ├── bayesian_dense_regression.py
+│ └── bayesian_density_network.py
+├── model_accuracy.png
+├── poetry.lock
+├── pred_bnn.png
+├── predict.py
+├── pyproject.toml
+├── realVSpreditoBNN.png
+├── realVSpreditoDBNN.png
+├── requirements.txt
+└── vanilla.py
+
 
 ### Contact
 
