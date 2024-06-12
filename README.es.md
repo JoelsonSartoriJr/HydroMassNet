@@ -3,90 +3,85 @@
 [![English](https://img.shields.io/badge/lang-English-blue)](README.md)
 [![Português](https://img.shields.io/badge/lang-Português-green)](README.pt.md)
 
-# HydroMassNet
+HydroMassNet
 
-HydroMassNet es un proyecto destinado a crear redes neuronales Bayesianas para identificar el porcentaje de masa de hidrógeno neutro en galaxias.
+HydroMassNet es un proyecto dirigido a la creación de redes neuronales Bayesianas para identificar el porcentaje de masa de hidrógeno neutro en galaxias.
 
-### Requisitos Previos
+Requisitos
+Python 3.8 o superior
+Poetry
+TensorFlow
+TensorFlow Probability
+Scikit-learn
+Matplotlib
+Seaborn
+Instalación
+Puedes instalar las dependencias usando Poetry o pip.
 
-- Python 3.8 o superior
-- Poetry
-- TensorFlow
-- TensorFlow Probability
-- Scikit-learn
-- Matplotlib
-- Seaborn
+Usando Poetry
 
-### Instalación
+Clona el repositorio:
 
-Puede instalar las dependencias usando Poetry o pip.
+bash
+Copiar código
+git clone https://github.com/joelsonsartori/HydroMassNet.git
+cd HydroMassNet
+Instala las dependencias usando Poetry:
 
-#### Usando Poetry
+bash
+Copiar código
+poetry install
+Usando pip
 
-1. Clone el repositorio:
-    ```bash
-    git clone https://github.com/joelsonsartori/HydroMassNet.git
-    cd HydroMassNet
-    ```
+Clona el repositorio:
 
-2. Instale las dependencias usando Poetry:
-    ```bash
-    poetry install
-    ```
+bash
+Copiar código
+git clone https://github.com/joelsonsartori/HydroMassNet.git
+cd HydroMassNet
+Crea y activa un entorno virtual (opcional pero recomendado):
 
-#### Usando pip
+bash
+Copiar código
+python -m venv venv
+source venv/bin/activate  # En Windows usa `venv\Scripts\activate`
+Instala las dependencias usando pip:
 
-1. Clone el repositorio:
-    ```bash
-    git clone https://github.com/joelsonsartori/HydroMassNet.git
-    cd HydroMassNet
-    ```
+bash
+Copiar código
+pip install -r requirements.txt
+Uso
+Ejecuta el script bayesian_model.py:
 
-2. Cree y active un entorno virtual (opcional pero recomendado):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # En Windows use `venv\Scripts\activate`
-    ```
+bash
+Copiar código
+poetry run python bayesian_model.py  # Si usas Poetry
+o
 
-3. Instale las dependencias usando pip:
-    ```bash
-    pip install -r requirements.txt
-    ```
+bash
+Copiar código
+python bayesian_model.py  # Si usas pip
+Ejecuta el script baseline.py:
 
-### Uso
+bash
+Copiar código
+poetry run python baseline.py  # Si usas Poetry
+o
 
-1. Ejecute el script `bayesian_model.py`:
-    ```bash
-    poetry run python model/bayesian_model.py  # Si está usando Poetry
-    ```
+bash
+Copiar código
+python baseline.py  # Si usas pip
+Ejecuta el script vanilla.py:
 
-    o
+bash
+Copiar código
+poetry run python vanilla.py  # Si usas Poetry
+o
 
-    ```bash
-    python model/bayesian_model.py  # Si está usando pip
-    ```
+bash
+Copiar código
+python vanilla.py  # Si usas pip
+Verifica los gráficos generados en el directorio del proyecto.
 
-2. Verifique los gráficos generados en el directorio del proyecto.
-
-### Estructura del Proyecto
-    .
-    ├── data
-    │   ├── cleaning_data_test.csv
-    ├── func
-    │   ├── data_preprocessing.py
-    ├── model
-    │   ├── model
-    │       ├── bayesian_dense_layer.py
-    │       ├── bayesian_dense_network.py
-    │       └── bayesian_dense_regression.py
-    │   ├── bayesian_density_network.py
-    │   └── bayesian_model.py
-    ├── README.md
-    ├── poetry.lock
-    ├── pyproject.toml
-    └── requirements.txt
-
-
-### Contacto
-
-Joelson Sartori Junior - [joelsonsartori@gmail.com](mailto:joelsonsartori@gmail.com)
+Contacto
+Joelson Sartori Junior - joelsonsartori@gmail.com
