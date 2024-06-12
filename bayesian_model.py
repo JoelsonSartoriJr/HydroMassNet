@@ -30,8 +30,8 @@ def main():
     val_split = 0.2
     seed = 1601
     batch_size = 256  # Ajuste no tamanho do lote
-    epochs = 600  # Ajuste no número de épocas
-    learning_rate = 1e-5  # Ajuste na taxa de aprendizado
+    epochs = 300  # Ajuste no número de épocas
+    learning_rate = 1e-4  # Ajuste na taxa de aprendizado
     weight_decay = 1e-6  # Adicionando weight decay
 
     # Carregar e pré-processar os dados
