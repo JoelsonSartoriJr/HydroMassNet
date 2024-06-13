@@ -3,7 +3,7 @@
 [![English](https://img.shields.io/badge/lang-English-blue)](README.md)
 [![Português](https://img.shields.io/badge/lang-Português-green)](README.pt.md)
 
-HydroMassNet
+# HydroMassNet
 
 HydroMassNet es un proyecto dirigido a la creación de redes neuronales Bayesianas para identificar el porcentaje de masa de hidrógeno neutro en galaxias.
 
@@ -21,67 +21,72 @@ Puedes instalar las dependencias usando Poetry o pip.
 Usando Poetry
 
 Clona el repositorio:
+    ```bash
+    git clone https://github.com/joelsonsartori/HydroMassNet.git
+    cd HydroMassNet
+    ```
 
-bash
-Copiar código
-git clone https://github.com/joelsonsartori/HydroMassNet.git
-cd HydroMassNet
-Instala las dependencias usando Poetry:
+2. Instala las dependencias usando Poetry:
+    ```bash
+    poetry install
+    ```
 
-bash
-Copiar código
-poetry install
-Usando pip
+#### Usando pip
 
-Clona el repositorio:
+1. Clona el repositorio:
+    ```bash
+    git clone https://github.com/joelsonsartori/HydroMassNet.git
+    cd HydroMassNet
+    ```
 
-bash
-Copiar código
-git clone https://github.com/joelsonsartori/HydroMassNet.git
-cd HydroMassNet
-Crea y activa un entorno virtual (opcional pero recomendado):
+2. Crea y activa un entorno virtual (opcional pero recomendado):
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    ```
 
-bash
-Copiar código
-python -m venv venv
-source venv/bin/activate  # En Windows usa `venv\Scripts\activate`
-Instala las dependencias usando pip:
+3. Instala las dependencias usando pip:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-bash
-Copiar código
-pip install -r requirements.txt
-Uso
-Ejecuta el script bayesian_model.py:
+### Uso
 
-bash
-Copiar código
-poetry run python bayesian_model.py  # Si usas Poetry
-o
+1. Ejecuta el script bayesian_model.py:
+    ```bash
+    poetry run python bayesian_model.py  # If using Poetry
+    ```
 
-bash
-Copiar código
-python bayesian_model.py  # Si usas pip
-Ejecuta el script baseline.py:
+    o
 
-bash
-Copiar código
-poetry run python baseline.py  # Si usas Poetry
-o
+    ```bash
+    python bayesian_model.py  # If using pip
+    ```
+    
+2. Verifica los gráficos generados en el directorio del proyecto.
+    ```bash
+    poetry run python baseline.py  # If using Poetry
+    ```
 
-bash
-Copiar código
-python baseline.py  # Si usas pip
-Ejecuta el script vanilla.py:
+    o
 
-bash
-Copiar código
-poetry run python vanilla.py  # Si usas Poetry
-o
+    ```bash
+    python baseline.py  # If using pip
+    ```
 
-bash
-Copiar código
-python vanilla.py  # Si usas pip
-Verifica los gráficos generados en el directorio del proyecto.
+3.  Ejecuta el script vanilla.py:
+    ```bash
+    poetry run python vanilla.py  # If using Poetry
+    ```
 
-Contacto
-Joelson Sartori Junior - joelsonsartori@gmail.com
+    o
+
+    ```bash
+    python vanilla.py  # If using pip
+    ```
+
+4. Verifica los gráficos generados en el directorio del proyecto.
+
+### Contato
+
+Joelson Sartori Junior - [joelsonsartori@gmail.com](mailto:joelsonsartori@gmail.com)
