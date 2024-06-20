@@ -29,8 +29,8 @@ def main():
     data_path = 'data/cleaning_data.csv'
     val_split = 0.2
     seed = 1601
-    batch_size = 256  # Ajuste no tamanho do lote
-    epochs = 300  # Ajuste no número de épocas
+    batch_size = 512  # Ajuste no tamanho do lote
+    epochs = 500  # Ajuste no número de épocas
     learning_rate = 1e-4  # Ajuste na taxa de aprendizado
     weight_decay = 1e-6  # Adicionando weight decay
 
