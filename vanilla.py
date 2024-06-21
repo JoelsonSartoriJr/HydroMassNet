@@ -159,11 +159,11 @@ class VanillaNeuralNetwork:
 
         plt.figure(figsize=(32, 7))
 
-        error = preds_real - y_val_real
+        error = np.abs(preds_real - y_val_real).flatten()
 
         plt.plot(y_val_real, y_val_real, color='green', zorder=3)
-        plt.errorbar(y_val_real, preds_real, yerr=error, fmt="o", alpha=0.7)
-        plt.scatter(y_val_real, preds_real, c=star_formation, zorder=3, alpha=0.7)
+        plt.errorbar(y_val_real.flatten(), preds_real.flatten(), yerr=error, fmt="o", alpha=0.7)
+        plt.scatter(y_val_real.flatten(), preds_real.flatten(), c=star_formation, zorder=3, alpha=0.7)
 
         plt.xlabel(r'True values ($log(M_{\odot} )$)', fontsize=24)
         plt.ylabel(r'Predict values ($log(M_{\odot})$)', fontsize=24)
