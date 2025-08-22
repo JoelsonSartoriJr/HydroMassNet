@@ -1,0 +1,60 @@
+# ===================================================================
+# Configurações Gerais do Projeto
+# ===================================================================
+project_name: "HydroMassNet"
+seed: 1601
+target_column: "logMH"
+
+# ===================================================================
+# Caminhos de Arquivos e Pastas
+# ===================================================================
+paths:
+  data: "data/cleaning_data.csv"
+  test_data: "data/cleaning_data_test.csv"
+  saved_models: "results/saved_models/"
+  plots: "results/plots/"
+
+# ===================================================================
+# Pré-processamento e Features
+# ===================================================================
+data_processing:
+  val_split: 0.2
+  features:
+    - "umag"
+    - "gmag"
+    - "rmag"
+    - "imag"
+    - "g-r"
+    - "u-r"
+    - "Vhelio"
+    - "expAB_r"
+    - "gamma_g"
+    - "gamma_i"
+    - "gmi_corr"
+    - "logMstarMcGaugh"
+    - "logSFR22"
+
+# ===================================================================
+# Hiperparâmetros de Treinamento
+# ===================================================================
+training:
+  batch_size: 512
+  epochs: 500
+  optimizer: "adam"
+  learning_rate: 0.0001
+
+# ===================================================================
+# Arquiteturas dos Modelos
+# ===================================================================
+models:
+  bnn:
+    layers: [13, 256, 128, 64, 32, 1]
+    save_name: "bnn_model.h5"
+  dbnn:
+    core_layers: [13, 512, 256, 64]
+    head_layers: [64, 32, 1]
+    save_name: "dbnn_model.h5"
+  vanilla:
+    layers: [64, 128, 64, 1]
+    dropout: 0.2
+    save_name: "vanilla_model.h5"

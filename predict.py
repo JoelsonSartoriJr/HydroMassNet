@@ -1,55 +1,71 @@
-import os
-import sys
 import argparse
+import yaml
+import os
+import joblib
 import numpy as np
 import tensorflow as tf
-from func.data_preprocessing import load_and_preprocess_data
-from model.bayesian_dense_regression import BayesianDenseRegression
-from model.bayesian_density_network import BayesianDensityNetwork
 
-def load_models(bnn_model_path, dbnn_model_path):
-    bnn_model = tf.keras.models.load_model(bnn_model_path, custom_objects={'BayesianDenseRegression': BayesianDenseRegression})
-    dbnn_model = tf.keras.models.load_model(dbnn_model_path, custom_objects={'BayesianDensityNetwork': BayesianDensityNetwork})
-    return bnn_model, dbnn_model
-
-def preprocess_input(input_values, scaler_x_fit):
-    input_array = np.array(input_values).reshape(1, -1)
-    input_scaled = scaler_x_fit.transform(input_array)
-    return input_scaled
-
-def predict(models, input_scaled):
-    bnn_model, dbnn_model = models
-    bnn_prediction = bnn_model(input_scaled, training=False).numpy().flatten()
-    dbnn_prediction = dbnn_model(input_scaled, training=False).numpy().flatten()
-    return bnn_prediction, dbnn_prediction
+from src.models.bayesian_dense_regression import BayesianDenseRegression
+from src.models.bayesian_density_network import BayesianDensityNetwork
 
 def main(args):
-    # Load scalers
-    data_path = 'data/cleaning_data_test.csv'
-    _, _, scaler_x_fit, scaler_y_fit = load_and_preprocess_data(data_path)
+    # Carregar configurações
+    with open(args.config, 'r') as f:
+        config = yaml.safe_load(f)
 
-    # Load models
-    bnn_model, dbnn_model = load_models(args.bnn_model_path, args.dbnn_model_path)
+    # Carregar scalers
+    scaler_x_path = os.path.join(config['paths']['saved_models'], 'scaler_x.pkl')
+    scaler_y_path = os.path.join(config['paths']['saved_models'], 'scaler_y.pkl')
+    scaler_x = joblib.load(scaler_x_path)
+    scaler_y = joblib.load(scaler_y_path)
 
-    # Preprocess input
-    input_scaled = preprocess_input(args.input_values, scaler_x_fit)
+    # Preprocessar entrada
+    input_values = np.array(args.input_values).reshape(1, -1)
+    if input_values.shape[1] != len(config['data_processing']['features']):
+        raise ValueError(f"Esperava {len(config['data_processing']['features'])} valores de entrada, mas recebeu {input_values.shape[1]}")
 
-    # Make predictions
-    bnn_prediction, dbnn_prediction = predict((bnn_model, dbnn_model), input_scaled)
+    input_scaled = scaler_x.transform(input_values)
 
-    # Inverse transform predictions
-    bnn_prediction_real = scaler_y_fit.inverse_transform(bnn_prediction.reshape(-1, 1)).flatten()
-    dbnn_prediction_real = scaler_y_fit.inverse_transform(dbnn_prediction.reshape(-1, 1)).flatten()
+    # Instanciar e carregar modelo
+    model_config = config['models'][args.model]
+    input_shape = (input_scaled.shape[1],)
 
-    # Print predictions
-    print(f'BNN Prediction: {bnn_prediction_real[0]:.4f}')
-    print(f'DBNN Prediction: {dbnn_prediction_real[0]:.4f}')
+    if args.model == 'bnn':
+        model = BayesianDenseRegression(model_config['layers'])
+        model.build(input_shape)
+    elif args.model == 'dbnn':
+        model = BayesianDensityNetwork(model_config['core_layers'], model_config['head_layers'])
+        model.build(input_shape)
+    else:
+         raise ValueError(f"Modelo '{args.model}' não é suportado.")
+
+    model_path = os.path.join(config['paths']['saved_models'], model_config['save_name'])
+    model.load_weights(model_path)
+    print(f"Pesos do modelo carregados de {model_path}")
+
+    # Fazer predições
+    num_samples = 100
+    predictions_scaled = np.array([model(input_scaled, training=True).numpy().flatten() for _ in range(num_samples)])
+
+    # Inverter a transformação para a escala original
+    # predictions_scaled tem shape (num_samples, 2) -> [loc, std]
+    loc_preds_scaled = predictions_scaled[:, 0].reshape(-1, 1)
+
+    predictions_real = scaler_y.inverse_transform(loc_preds_scaled)
+
+    mean_pred = np.mean(predictions_real)
+    std_pred = np.std(predictions_real)
+
+    print("\n--- Resultados da Predição ---")
+    print(f"Modelo: {args.model.upper()}")
+    print(f"Média da Previsão (logMH): {mean_pred:.4f}")
+    print(f"Desvio Padrão da Previsão (incerteza): {std_pred:.4f}")
+    print("----------------------------\n")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Predict using Bayesian Neural Networks')
-    parser.add_argument('input_values', type=float, nargs='+', help='Input values for prediction')
-    parser.add_argument('--bnn_model_path', type=str, required=True, help='Path to the saved BNN model (.h5 file)')
-    parser.add_argument('--dbnn_model_path', type=str, required=True, help='Path to the saved DBNN model (.h5 file)')
-
+    parser = argparse.ArgumentParser(description='Predição com Modelos HydroMassNet')
+    parser.add_argument('--model', type=str, required=True, choices=['bnn', 'dbnn'], help='Qual modelo usar para predição.')
+    parser.add_argument('--input_values', type=float, nargs='+', required=True, help='Valores de entrada para as features (13 valores).')
+    parser.add_argument('--config', type=str, default='config/config.yaml', help='Caminho para o arquivo de configuração.')
     args = parser.parse_args()
     main(args)
