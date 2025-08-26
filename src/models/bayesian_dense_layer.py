@@ -1,42 +1,67 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
-from func.utils import xavier
 
 tfd = tfp.distributions
 
 class BayesianDenseLayer(tf.keras.layers.Layer):
+    """Camada Densa Bayesiana implementando a Local Reparameterization Trick.
+
+        Attributes
+        ----------
+        d_in : int
+            Dimensão de entrada da camada.
+        d_out : int
+            Dimensão de saída da camada.
+    """
     def __init__(self, d_in, d_out, name=None):
         super(BayesianDenseLayer, self).__init__(name=name)
         self.d_in = d_in
         self.d_out = d_out
-        self.w_loc = None
-        self.w_std = None
-        self.b_loc = None
-        self.b_std = None
 
     def build(self, input_shape):
-        self.w_loc = self.add_weight(name='w_loc', shape=[self.d_in, self.d_out], initializer=xavier)
-        self.w_std = self.add_weight(name='w_std', shape=[self.d_in, self.d_out], initializer=tf.constant_initializer(-6.0))
-        self.b_loc = self.add_weight(name='b_loc', shape=[1, self.d_out], initializer=xavier)
-        self.b_std = self.add_weight(name='b_std', shape=[1, self.d_out], initializer=tf.constant_initializer(-6.0))
+        w_loc_init = tf.keras.initializers.GlorotUniform()
+        self.w_loc = self.add_weight(
+            name='w_loc', shape=[self.d_in, self.d_out], initializer=w_loc_init
+        )
+        w_rho_init = tf.keras.initializers.Constant(-5.0)
+        self.w_rho = self.add_weight(
+            name='w_rho', shape=[self.d_in, self.d_out], initializer=w_rho_init
+        )
+
+        b_loc_init = tf.keras.initializers.Zeros()
+        self.b_loc = self.add_weight(
+            name='b_loc', shape=[self.d_out], initializer=b_loc_init
+        )
+        b_rho_init = tf.keras.initializers.Constant(-5.0)
+        self.b_rho = self.add_weight(
+            name='b_rho', shape=[self.d_out], initializer=b_rho_init
+        )
         super(BayesianDenseLayer, self).build(input_shape)
 
-    @property
-    def weight(self):
-        return tfd.Normal(self.w_loc, tf.nn.softplus(self.w_std))
-
-    @property
-    def bias(self):
-        return tfd.Normal(self.b_loc, tf.nn.softplus(self.b_std))
-
     def call(self, x, sampling=True):
-        if sampling:
-            return x @ self.weight.sample() + self.bias.sample()
-        else:
-            return x @ self.w_loc + self.b_loc
+        w_scale = tf.nn.softplus(self.w_rho)
+        b_scale = tf.nn.softplus(self.b_rho)
 
-    @property
-    def losses(self):
-        prior = tfd.Normal(0, 1)
-        return (tf.reduce_sum(tfd.kl_divergence(self.weight, prior)) +
-                tf.reduce_sum(tfd.kl_divergence(self.bias, prior)))
+        w_prior = tfd.Normal(loc=0., scale=1.)
+        b_prior = tfd.Normal(loc=0., scale=1.)
+
+        w_posterior = tfd.Normal(loc=self.w_loc, scale=w_scale)
+        b_posterior = tfd.Normal(loc=self.b_loc, scale=b_scale)
+
+        kl_loss = (
+            tf.reduce_sum(tfd.kl_divergence(w_posterior, w_prior)) +
+            tf.reduce_sum(tfd.kl_divergence(b_posterior, b_prior))
+        )
+
+        batch_size = tf.cast(tf.shape(x)[0], dtype=tf.float32)
+        self.add_loss(kl_loss / batch_size)
+
+        if sampling:
+            activation_loc = tf.matmul(x, self.w_loc) + self.b_loc
+            activation_var = tf.matmul(tf.square(x), tf.square(w_scale)) + tf.square(b_scale)
+            activation_scale = tf.sqrt(activation_var + 1e-6)
+
+            eps = tf.random.normal(tf.shape(activation_loc), dtype=tf.float32)
+            return activation_loc + activation_scale * eps
+        else:
+            return tf.matmul(x, self.w_loc) + self.b_loc

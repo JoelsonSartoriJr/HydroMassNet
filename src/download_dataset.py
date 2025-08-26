@@ -7,15 +7,26 @@ import os
 import sys
 import tempfile
 
-# --- Configurações ---
 DATA_DIR = 'data'
 RAW_DATA_PATH = os.path.join(DATA_DIR, 'alfalfa_raw_full.csv')
 FULL_DATASET_PATH = os.path.join(DATA_DIR, 'hydromassnet_full_dataset_all_columns.csv')
-VIZIER_CATALOG = "J/AJ/160/271" # Durbala et al. 2020
-TARGET_COLUMN = 'logMHI' # <-- NOME DA COLUNA CORRIGIDO AQUI
+VIZIER_CATALOG = "J/AJ/160/271"
+TARGET_COLUMN = 'logMHI'
 
 def find_coord_columns(df):
-    """Encontra dinamicamente os nomes das colunas de RA e Dec."""
+    """
+    Encontra dinamicamente os nomes das colunas de RA e Dec.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame com dados do catálogo.
+
+    Returns
+    -------
+    tuple
+        Nomes das colunas de RA e Dec.
+    """
     ra_possible_names = ['RAdeg', 'ra', '_RA', 'RAJ2000']
     dec_possible_names = ['DEdeg', 'dec', '_DE', 'DEJ2000']
 
@@ -27,7 +38,19 @@ def find_coord_columns(df):
     return ra_col, dec_col
 
 def fetch_base_catalog(cache_path=RAW_DATA_PATH):
-    """Baixa e mescla as tabelas do catálogo ALFALFA-SDSS de forma robusta."""
+    """
+    Baixa e mescla as tabelas do catálogo ALFALFA-SDSS de forma robusta.
+
+    Parameters
+    ----------
+    cache_path : str, optional
+        Caminho para o cache.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame com dados do catálogo.
+    """
     if os.path.exists(cache_path):
         print(f"--- Usando dados base cacheados de '{cache_path}' ---")
         df_cache = pd.read_csv(cache_path)
@@ -64,7 +87,6 @@ def fetch_base_catalog(cache_path=RAW_DATA_PATH):
              raise KeyError("Não foi possível identificar as colunas de coordenadas no dataframe final.")
 
         alfalfa_full.rename(columns={ra_col_name: 'ra', dec_col_name: 'dec'}, inplace=True)
-        # Remove linhas onde a coordenada ou o alvo são nulos
         alfalfa_full.dropna(subset=['ra', 'dec', TARGET_COLUMN], inplace=True)
 
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
@@ -77,7 +99,19 @@ def fetch_base_catalog(cache_path=RAW_DATA_PATH):
         sys.exit(1)
 
 def query_and_merge_external_data(base_df):
-    """Realiza cross-match e mescla dados de catálogos externos."""
+    """
+    Realiza cross-match e mescla dados de catálogos externos.
+
+    Parameters
+    ----------
+    base_df : pd.DataFrame
+        DataFrame base para o cross-match.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame com dados externos mesclados.
+    """
     print("\n--- Etapa 2: Realizando cross-match com catálogos externos ---")
 
     coords_df = base_df[['ra', 'dec']].copy()
@@ -113,7 +147,19 @@ def query_and_merge_external_data(base_df):
         os.remove(temp_filename)
 
 def finalize_dataset(df):
-    """Limpa o dataset final e prepara para o uso."""
+    """
+    Limpa o dataset final e prepara para o uso.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a ser finalizado.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame final limpo.
+    """
     print("\n--- Etapa 3: Finalizando o dataset ---")
 
     print(f"Shape antes da limpeza final: {df.shape}")
@@ -130,7 +176,9 @@ def finalize_dataset(df):
     return df
 
 def main():
-    """Orquestra o pipeline completo de criação do dataset."""
+    """
+    Orquestra o pipeline completo de criação do dataset.
+    """
     base_catalog = fetch_base_catalog()
     enriched_catalog = query_and_merge_external_data(base_catalog)
     final_dataset = finalize_dataset(enriched_catalog)
@@ -140,4 +188,5 @@ def main():
     print(f"O dataset final contém {len(final_dataset)} galáxias e {len(final_dataset.columns)} colunas.")
 
 if __name__ == '__main__':
+    Vizier.TIMEOUT = 120
     main()

@@ -1,51 +1,69 @@
 import pandas as pd
-import numpy as np
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-import joblib
-import os
 
 class DataHandler:
-    def __init__(self, config):
+    """
+    Classe para carregar, dividir e escalar os dados do projeto.
+    """
+    def __init__(self, config, feature_override=None):
+        """
+        Inicializa o DataHandler.
+
+        Parameters
+        ----------
+        config : dict
+            Dicionário de configuração principal do projeto.
+        feature_override : list, optional
+            Uma lista de features para usar no lugar daquelas no config.
+        """
         self.config = config
-        self.scaler_x = MinMaxScaler()
-        self.scaler_y = MinMaxScaler()
-        self.feature_labels = self.config['data_processing']['features']
+        self.feature_override = feature_override
+        self.scaler = MinMaxScaler()
+        self.data = None
+        self.X_train, self.y_train = None, None
+        self.X_val, self.y_val = None, None
+        self.X_test, self.y_test = None, None
 
-    def load_and_preprocess(self, training=True):
-        data_path = self.config['paths']['data'] if training else self.config['paths']['test_data']
-        data = pd.read_csv(data_path)
+    def load_and_split_data(self):
+        """Carrega e divide os dados em treino, validação e teste."""
+        df = pd.read_csv(self.config['paths']['processed_data'])
 
-        # Engenharia de feature
-        if 'u-r' in self.feature_labels:
-            data['u-r'] = data['umag'] - data['rmag']
-
-        data = data.sample(frac=1, random_state=self.config['seed'])
-
-        data_x = data[self.feature_labels]
-        data_y = data[[self.config['target_column']]]
-
-        # Fit e transform para dados de treino, apenas transform para predição
-        if training:
-            data_scaled_x = self.scaler_x.fit_transform(data_x)
-            data_scaled_y = self.scaler_y.fit_transform(data_y)
-            # Salvar scalers
-            os.makedirs(self.config['paths']['saved_models'], exist_ok=True)
-            joblib.dump(self.scaler_x, os.path.join(self.config['paths']['saved_models'], 'scaler_x.pkl'))
-            joblib.dump(self.scaler_y, os.path.join(self.config['paths']['saved_models'], 'scaler_y.pkl'))
+        if self.feature_override:
+            features = self.feature_override
         else:
-            self.scaler_x = joblib.load(os.path.join(self.config['paths']['saved_models'], 'scaler_x.pkl'))
-            self.scaler_y = joblib.load(os.path.join(self.config['paths']['saved_models'], 'scaler_y.pkl'))
-            data_scaled_x = self.scaler_x.transform(data_x)
-            data_scaled_y = self.scaler_y.transform(data_y)
+            features = self.config['data_processing']['features']
 
-        return data_scaled_x, data_scaled_y.flatten()
+        target = self.config['target_column']
 
-    def split_data(self, data_x, data_y):
-        np.random.seed(self.config['seed'])
-        val_split = self.config['data_processing']['val_split']
-        train_idx = np.random.choice([False, True], size=data_x.shape[0], p=[val_split, 1.0 - val_split])
+        X = df[features]
+        y = df[target]
 
-        x_train, y_train = data_x[train_idx], data_y[train_idx]
-        x_val, y_val = data_x[~train_idx], data_y[~train_idx]
+        # Primeira divisão: separar o teste
+        X_temp, self.X_test, y_temp, self.y_test = train_test_split(
+            X, y,
+            test_size=self.config['data_processing']['test_split'],
+            random_state=self.config['seed']
+        )
 
-        return x_train, np.expand_dims(y_train, 1), x_val, np.expand_dims(y_val, 1)
+        # Segunda divisão: separar treino e validação a partir do restante
+        val_size_adjusted = self.config['data_processing']['val_split'] / (1 - self.config['data_processing']['test_split'])
+
+        self.X_train, self.X_val, self.y_train, self.y_val = train_test_split(
+            X_temp, y_temp,
+            test_size=val_size_adjusted,
+            random_state=self.config['seed']
+        )
+        self.features = features
+
+    def scale_features(self):
+        """Aplica a escala MinMax nos dados de treino e transforma os de validação/teste."""
+        self.X_train = self.scaler.fit_transform(self.X_train)
+        self.X_val = self.scaler.transform(self.X_val)
+        self.X_test = self.scaler.transform(self.X_test)
+
+    def get_full_dataset_and_splits(self):
+        """Método principal para obter todos os dados processados."""
+        self.load_and_split_data()
+        self.scale_features()
+        return self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, self.features
