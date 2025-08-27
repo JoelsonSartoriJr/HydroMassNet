@@ -1,92 +1,141 @@
-## Português
+# HydroMassNet — Redes Neurais Bayesianas para Massa de Hidrogênio Neutro
 
-[![English](https://img.shields.io/badge/lang-English-blue)](README.md)
-[![Español](https://img.shields.io/badge/lang-Español-red)](README.es.md)
+[Português](README.pt.md) | [English](README.en.md) | [Español](README.es.md)
 
-# HydroMassNet
+HydroMassNet é um pipeline de ponta a ponta para estimar a massa de hidrogênio neutro em galáxias (log10(M_HI)) usando Redes Neurais Bayesianas (BNNs). Ele cobre aquisição de dados (catálogos astronômicos), pré-processamento, engenharia de atributos, treinamento/avaliação com incerteza, comparação de modelos e geração de figuras para publicação.
 
-HydroMassNet é um projeto voltado para a criação de redes neurais Bayesianas para identificar a porcentagem de massa de hidrogênio neutro em galáxias.
+- Stack principal: TensorFlow 2.x, TensorFlow Probability, scikit-learn, LightGBM
+- Acesso a dados astronômicos: astroquery (VizieR, XMatch)
+- Configuração reprodutível via YAML
 
-Pré-requisitos
-Python 3.8 ou superior
-Poetry
-TensorFlow
-TensorFlow Probability
-Scikit-learn
-Matplotlib
-Seaborn
-Instalação
-Você pode instalar as dependências usando Poetry ou pip.
+## Estrutura do repositório
 
-Usando Poetry
+- data/: datasets brutos e processados
+- results/
+  - saved_models/: pesos treinados e artefatos (inclui CSVs de predições)
+  - plots/: figuras geradas durante a avaliação
+  - search_results/: relatórios de seleção de features e busca de hiperparâmetros
+- config/
+  - config.yaml: configurações do projeto (paths, dados, treino, seleção de features, campeões)
+- src/
+  - download_dataset.py: constrói o catálogo completo (VizieR + cross-match opcional)
+  - preprocess.py: limpeza, imputação, engenharia de atributos e salvamento do CSV processado
+  - train.py: treinamento genérico (bayesianos e vanilla) para experimentos
+  - evaluate.py: avalia um modelo treinado e salva predições com incerteza
+  - predict.py: predição de uma amostra com incerteza
+  - baseline.py: baseline de regressão linear
+  - feature_selection.py: exploração/seleção de features com LightGBM
+  - run_full_optimization.py: estágio 1 (seleção) + estágio 2 (busca de hiperparâmetros)
+  - plotting.py, publication_plots.py: utilitários de plotagem
+  - models/: camadas e arquiteturas Bayesianas
+  - utils/: utilitários auxiliares
+- run_pipeline.py: orquestra preprocess -> train -> evaluate -> baseline -> plots
+- run_champions.py: treina/avalia os modelos campeões definidos no config
+- pyproject.toml / requirements.txt: dependências
+- LICENSE: MIT
 
-Clone o repositório:
-    ```bash
-    git clone https://github.com/joelsonsartori/HydroMassNet.git
-    cd HydroMassNet
-    ```
+## Requisitos
 
-2. Instale as dependências usando o Poetry:
-    ```bash
-    poetry install
-    ```
+- Python >= 3.9
+- Poetry (recomendado) ou pip/venv
+- Opcional: GPU com TensorFlow configurado
 
-#### Usando pip
+## Instalação
 
-1. Clone o repositório:
-    ```bash
-    git clone https://github.com/joelsonsartori/HydroMassNet.git
-    cd HydroMassNet
-    ```
+- Poetry (recomendado)
+  - git clone https://github.com/joelsonsartori/HydroMassNet.git
+  - cd HydroMassNet
+  - poetry install
 
-2. Crie e ative um ambiente virtual (opcional, mas recomendado):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    ```
+- pip
+  - git clone https://github.com/joelsonsartori/HydroMassNet.git
+  - cd HydroMassNet
+  - python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
+  - pip install -r requirements.txt
 
-3. Instale as dependências usando pip:
-    ```bash
-    pip install -r requirements.txt
-    ```
+## Configuração
 
-### Uso
+A configuração principal está em config/config.yaml (alguns scripts também procuram ./config.yaml quando executados na raiz). Seções principais:
 
-1. Execute o script bayesian_model.py:
-    ```bash
-    poetry run python bayesian_model.py  # If using Poetry
-    ```
+- paths: raw_data, processed_data, saved_models, plots, search_results
+- data_processing: divisões de validação/teste e a lista de features do dataset processado
+- training: epochs, patience
+- feature_selection: features candidatas, min_features, top_n_to_tune
+- champion_models: features por modelo e hiperparâmetros finais (bnn, dbnn, vanilla)
 
-    ou
+## Início rápido
 
-    ```bash
-    python bayesian_model.py  # If using pip
-    ```
-    
-2. Execute o script baseline.py:
-    ```bash
-    poetry run python baseline.py  # If using Poetry
-    ```
+1) Construir o catálogo completo (download/merge via astroquery)
+- poetry run python src/download_dataset.py
 
-    ou
+2) Pré-processar e engenhar features
+- poetry run python src/preprocess.py
 
-    ```bash
-    python baseline.py  # If using pip
-    ```
+3) Treinar + avaliar tudo e gerar plots (orquestração)
+- poetry run python run_pipeline.py
 
-3.  Execute o script vanilla.py:
-    ```bash
-    poetry run python vanilla.py  # If using Poetry
-    ```
+Isso roda bnn, dbnn e vanilla, gera CSVs de predições em results/saved_models e figuras em results/plots.
 
-    ou
+## Uso manual
 
-    ```bash
-    python vanilla.py  # If using pip
-    ```
+- Treinar um modelo específico
+  - poetry run python src/train.py --model bnn
+  - poetry run python src/train.py --model dbnn
+  - poetry run python src/train.py --model vanilla
+  - Flags opcionais:
+    - --learning_rate, --batch_size
+    - --hidden_layers para bnn/vanilla (ex.: 256-128)
+    - --core_layers/--head_layers para dbnn (ex.: 512-256 e 128-64)
+    - --dropout para vanilla
+    - --features "iMAG,e_iMAG,logMsT,..." para sobrescrever as features
 
-4. Verifique os gráficos gerados no diretório do projeto.
+- Avaliar um modelo treinado (gera {model}_predictions.csv)
+  - poetry run python src/evaluate.py --model bnn|dbnn|vanilla
 
-### Contato
+- Baseline
+  - poetry run python src/baseline.py
 
-Joelson Sartori Junior - [joelsonsartori@gmail.com](mailto:joelsonsartori@gmail.com)
+- Plots
+  - Gerados automaticamente por run_pipeline.py (históricos, comparação de predições e intervalos de confiança)
+
+- Predizer uma amostra com incerteza
+  - poetry run python src/predict.py --model bnn --input_values <v1 v2 ... vN> --config config/config.yaml
+  - Obs.: input_values deve ter o mesmo comprimento de data_processing.features; usa scaler_x.pkl e scaler_y.pkl.
+
+- Otimização completa (seleção de features + busca de hiperparâmetros)
+  - poetry run python src/run_full_optimization.py
+
+- Modelos campeões (treino/avaliação finais conforme config.champion_models)
+  - poetry run python run_champions.py
+
+## Dados e features
+
+- Alvo padrão: logMHI
+- Exemplo de features (do config): iMAG, e_iMAG, logMsT, logSFR22, e_logMsT, Dist, RVel, Ag, Ai, surface_brightness_proxy
+- O proxy surface_brightness_proxy é derivado no pré-processamento a partir de iMAG e razão de eixos b/a
+- Dados salvos em CSVs sob data/ conforme configurado
+
+## Reprodutibilidade
+
+- Semente global no YAML (seed: 1601)
+- Pipelines guiados por configuração e pré-processamento determinístico sempre que possível
+
+## Resultados e artefatos
+
+- results/saved_models/: pesos (*.weights.h5), CSVs de predições, históricos
+- results/plots/: figuras PNG/PDF de métricas de treino e visualização de incerteza
+- results/search_results/: relatórios CSV de seleção de features e otimização
+
+## Licença
+
+Projeto licenciado sob MIT. Veja LICENSE para detalhes.
+
+## Citação
+
+Se usar o HydroMassNet em trabalhos acadêmicos, por favor cite este repositório. Um BibTeX será adicionado quando houver preprint.
+
+## Agradecimentos
+
+- Serviços VizieR e XMatch via astroquery
+- TensorFlow Probability para camadas Bayesianas
+- Bibliotecas da comunidade: scikit-learn, LightGBM, pandas, matplotlib/seaborn
