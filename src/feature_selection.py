@@ -1,95 +1,68 @@
 import pandas as pd
 import yaml
-import itertools
+import matplotlib
+# CORREÇÃO: Define o backend não interativo para matplotlib
+matplotlib.use('agg')
 import lightgbm as lgb
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-import numpy as np
-from tqdm import tqdm
-from datetime import datetime
+import shap
+import matplotlib.pyplot as plt
 import os
 
-def run_feature_selection(config: dict) -> str:
+# CORREÇÃO: Alterado para importação relativa
+from .data import DataHandler
+
+def run_feature_selection(config: dict):
     """
-    Executa a seleção de features usando LightGBM e busca por combinações ideais.
-
-    Parameters
-    ----------
-    config : dict
-        Dicionário de configurações do projeto.
-
-    Returns
-    -------
-    str
-        O caminho do arquivo com os resultados da seleção.
+    Executa a seleção de features usando LightGBM e SHAP.
     """
-    print("--- Iniciando o processo de Seleção de Features ---")
+    print("\n--- Iniciando Seleção de Features com LightGBM e SHAP ---")
 
-    data = pd.read_csv(config['paths']['processed_data'])
-    candidate_features = config['feature_selection']['candidates']
-    target = config['target_column']
-    candidate_features = [f for f in candidate_features if f in data.columns]
-    print(f"Testando combinações de {len(candidate_features)} features candidatas.")
+    # 1. Carrega os dados
+    data_handler = DataHandler(config=config)
+    x_train, y_train, x_val, y_val, _, _, feature_names = data_handler.get_full_dataset_and_splits()
 
-    X = data[candidate_features]
-    y = data[target]
+    # 2. Treina o modelo LightGBM
+    lgb_train = lgb.Dataset(x_train, y_train, feature_name=feature_names)
+    lgb_val = lgb.Dataset(x_val, y_val, reference=lgb_train, feature_name=feature_names)
 
-    scaler_x = MinMaxScaler()
-    X_scaled = scaler_x.fit_transform(X)
-    X_scaled = pd.DataFrame(X_scaled, columns=candidate_features)
+    params = config['feature_selection']['lgbm_params']
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_scaled, y,
-        test_size=config['data_processing']['val_split'],
-        random_state=config['seed']
+    model = lgb.train(
+        params,
+        lgb_train,
+        valid_sets=[lgb_train, lgb_val],
+        callbacks=[lgb.early_stopping(10, verbose=False)]
     )
 
-    results = []
-    min_features = config['feature_selection']['min_features']
+    # 3. Calcula os valores SHAP
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(x_val)
 
-    all_combinations = []
-    for i in range(min_features, len(candidate_features) + 1):
-        all_combinations.extend(itertools.combinations(candidate_features, i))
+    # 4. Processa e seleciona as features
+    mean_abs_shap = pd.Series(abs(shap_values).mean(axis=0), index=feature_names)
+    mean_abs_shap = mean_abs_shap.sort_values(ascending=False)
 
-    print(f"Total de combinações a serem testadas: {len(all_combinations)}")
+    shap_threshold = config['feature_selection']['shap_threshold']
+    selected_features = mean_abs_shap[mean_abs_shap > shap_threshold].index.tolist()
 
-    for combo in tqdm(all_combinations, desc="Testando Combinações de Features"):
-        combo_list = list(combo)
+    print(f"\n--- {len(selected_features)} features selecionadas com SHAP > {shap_threshold} ---")
+    print(selected_features)
 
-        lgbm = lgb.LGBMRegressor(random_state=config['seed'], n_estimators=200, verbose=-1)
-        lgbm.fit(X_train[combo_list], y_train)
+    # 5. Salva o gráfico de importância das features
+    reports_dir = config['paths']['reports']
+    os.makedirs(reports_dir, exist_ok=True)
 
-        y_pred = lgbm.predict(X_val[combo_list])
-        rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-        r2 = r2_score(y_val, y_pred)
+    plt.figure(figsize=(10, len(feature_names) / 2))
+    shap.summary_plot(shap_values, x_val, feature_names=feature_names, show=False, plot_type="bar")
+    plt.tight_layout()
+    plot_path = os.path.join(reports_dir, 'feature_importance_shap.png')
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"\n--- Gráfico de importância SHAP salvo em: {plot_path} ---")
 
-        results.append({
-            'num_features': len(combo_list),
-            'features': ", ".join(combo_list),
-            'rmse': rmse,
-            'r2': r2
-        })
+    return selected_features
 
-    results_df = pd.DataFrame(results)
-    results_df = results_df.sort_values(by=['r2', 'rmse'], ascending=[False, True])
-
-    results_dir = config['paths']['search_results']
-    os.makedirs(results_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    results_filename = os.path.join(results_dir, f'feature_selection_results_{timestamp}.csv')
-    results_df.to_csv(results_filename, index=False)
-
-    print("\n" + "="*80)
-    print("--- Seleção de Features Concluída ---")
-    print(f"Resultados salvos em: {results_filename}")
-    print("\n--- 5 Melhores Combinações de Features Encontradas ---")
-    print(results_df.head(5).to_string())
-    print("="*80)
-
-    return results_filename
-
-if __name__ == "__main__":
-    with open('config.yaml', 'r') as f:
-        config_data = yaml.safe_load(f)
-    run_feature_selection(config_data)
+if __name__ == '__main__':
+    with open('config/config.yaml', 'r') as f:
+        main_config = yaml.safe_load(f)
+    run_feature_selection(config=main_config)
