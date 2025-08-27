@@ -1,3 +1,21 @@
+import tensorflow as tf
+
+def setup_device():
+    """Detecta e configura o dispositivo de hardware (GPU/CPU) para treinamento."""
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Configura o crescimento de memória para evitar alocação total
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            print(f"--- Dispositivo: {len(gpus)} GPU(s) encontrada(s) e configurada(s). O treinamento usará a GPU. ---")
+        except RuntimeError as e:
+            # O crescimento de memória deve ser definido antes que as GPUs sejam inicializadas
+            print(f"--- Erro ao configurar GPU: {e} ---")
+            print("--- Dispositivo: Usando CPU. ---")
+    else:
+        print("--- Dispositivo: Nenhuma GPU encontrada. Usando CPU. ---")
+
 def parse_layers(layers_str: str, input_dim: int, output_dim: int = 1):
     """
     Converte uma string como '256-128' para uma lista de dimensões de camada,

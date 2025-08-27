@@ -9,6 +9,7 @@ from .data import DataHandler
 from .models.bayesian_dense_network import BayesianDenseNetwork
 from .models.bayesian_density_network import BayesianDensityNetwork
 from .models.vanilla_network import VanillaNetwork
+from .utils.train_utils import setup_device # Importação centralizada
 
 def train(model_name, features, exp_config, main_config):
     """Função principal de treinamento unificada e final."""
@@ -56,6 +57,9 @@ def train(model_name, features, exp_config, main_config):
     print(json.dumps(best_epoch_metrics.to_dict()))
 
 if __name__ == '__main__':
+    # Configura o dispositivo (GPU/CPU)
+    setup_device()
+
     parser = argparse.ArgumentParser(description="Script de Treinamento de Modelos")
     parser.add_argument('--model_name', type=str, required=True)
     parser.add_argument('--features', type=str, required=True)
