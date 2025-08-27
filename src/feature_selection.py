@@ -1,14 +1,14 @@
 import pandas as pd
 import yaml
 import matplotlib
-# CORREÇÃO: Define o backend não interativo para matplotlib
+# CORREÇÃO: Define um backend não interativo para o Matplotlib
 matplotlib.use('agg')
 import lightgbm as lgb
 import shap
 import matplotlib.pyplot as plt
 import os
 
-# CORREÇÃO: Alterado para importação relativa
+# CORREÇÃO: Importação relativa para o módulo de dados
 from .data import DataHandler
 
 def run_feature_selection(config: dict):

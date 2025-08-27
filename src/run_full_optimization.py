@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from datetime import datetime
 
-# CORREÇÃO: Alterado para importação relativa
+# CORREÇÃO: Importação relativa para feature_selection
 from .feature_selection import run_feature_selection
 from .hyperparameter_search import run_hyperparameter_search_for_feature_set
 
