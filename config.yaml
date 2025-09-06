@@ -1,20 +1,99 @@
-project_name: "HydroMassNet"
-seed: 1601
-target_column: "logMHI"
-
-paths:
-  raw_data: "data/hydromassnet_full_dataset_all_columns.csv"
-  processed_data: "data/hydromassnet_processed.csv"
-
 data_processing:
-  features:
-    - "iMAG"
-    - "e_iMAG"
-    - "logMsT"
-    - "logSFR22"
-    - "e_logMsT"
-    - "Dist"
-    - "RVel"
-    - "Ag"
-    - "Ai"
-    - "surface_brightness_proxy"
+  test_split: 0.15
+  val_split: 0.15
+feature_selection:
+  candidate_features:
+  - iMAG
+  - e_iMAG
+  - logMsT
+  - logSFR22
+  - e_logMsT
+  - Dist
+  - RVel
+  - Ag
+  - Ai
+  - surface_brightness_proxy
+  evaluation_model_config:
+    batch_size: 128
+    dropout: 0.2
+    features:
+    - iMAG
+    - e_iMAG
+    - logMsT
+    - logSFR22
+    - e_logMsT
+    - Dist
+    - RVel
+    - Ag
+    - Ai
+    - surface_brightness_proxy
+    layers: 64-32
+    learning_rate: 0.001
+  min_features: 5
+hyperparameter_search:
+  bnn:
+    batch_size:
+    - 128
+    - 256
+    features:
+    - &id001
+      - iMAG
+      - e_iMAG
+      - logMsT
+      - logSFR22
+      - e_logMsT
+    layers:
+    - 128-64
+    - 256-128
+    - 256-128-64
+    learning_rate:
+    - 0.001
+    - 0.0005
+    - 0.0001
+  dbnn:
+    batch_size:
+    - 256
+    - 512
+    core_layers:
+    - 256-128
+    - 512-256
+    - 512-256-128
+    features:
+    - *id001
+    head_layers:
+    - '64'
+    - '32'
+    learning_rate:
+    - 0.0005
+    - 0.0001
+  vanilla:
+    batch_size:
+    - 64
+    - 128
+    - 256
+    dropout:
+    - 0.1
+    - 0.2
+    - 0.3
+    features:
+    - *id001
+    layers:
+    - 256-128
+    - 128-64-32
+    - 512-256-128
+    learning_rate:
+    - 0.001
+    - 0.0005
+paths:
+  champion_results: results/champions
+  feature_selection_results: results/feature_selection
+  processed_data: data/hydromassnet_processed.csv
+  raw_data: data/hydromassnet_full_dataset_all_columns.csv
+  results: results
+  search_results: results/hyperparameter_search
+project_name: HydroMassNet
+seed: 1601
+target_column: logMHI
+training:
+  epochs: 300
+  patience: 35

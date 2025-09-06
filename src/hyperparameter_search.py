@@ -1,63 +1,95 @@
+# file: ./src/hyperparameter_search.py
 import os
-import subprocess
-import pandas as pd
-import itertools
+import yaml
 import json
+import itertools
+import pandas as pd
+from datetime import datetime
+from src.utils.commands import run_command
 
-def run_training_job(model_name: str, config: dict, experiment_id: int, feature_set: list):
-    """Executa o script de treino como um módulo para resolver problemas de import."""
+def run_training_job(model_type: str, params: dict, experiment_id: int, save_dir: str):
+    """
+    Executa um job de treinamento e retorna a métrica de performance.
+
+    Args:
+        model_type (str): O tipo de modelo ('bnn', 'dbnn', 'vanilla').
+        params (dict): Dicionário com os hiperparâmetros para o experimento.
+        experiment_id (int): Um identificador único para o experimento.
+        save_dir (str): Diretório para salvar os artefatos temporários do job.
+
+    Returns:
+        float: O MAE de validação, ou infinito em caso de erro.
+    """
+    print(f"\n--- Iniciando Experimento {experiment_id}: {model_type.upper()} ---")
+    save_path = os.path.join(save_dir, f"{model_type}_exp_{experiment_id}")
+
     command = [
-        'python', '-m', 'src.train',
-        '--model_name', model_name,
-        '--config', json.dumps(config),
-        '--experiment_id', str(experiment_id),
-        '--features', ",".join(feature_set)
+        'poetry', 'run', 'python', '-m', 'src.train',
+        '--model_type', model_type,
+        '--model_config', json.dumps(params),
+        '--save_path', save_path
     ]
-
-    print(f"\n--- Iniciando Experimento {experiment_id}: {model_name.upper()} ---")
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
-
-    if result.returncode != 0:
-        print("### ERRO NO TREINAMENTO ###")
-        print(result.stderr)
-        return None
-
     try:
-        output_json = result.stdout.strip().split('\n')[-1]
-        performance = json.loads(output_json)
-        return performance
-    except (json.JSONDecodeError, IndexError):
-        print(f"### ERRO AO PROCESSAR RESULTADO DO TREINAMENTO ###")
-        print(f"Saída do script: {result.stdout}")
-        return None
+        output = run_command(command)
+        performance_str = output.strip().split('\n')[-1]
+        performance = json.loads(performance_str)
+        return performance['val_mae']
+    except (RuntimeError, json.JSONDecodeError, IndexError) as e:
+        print(f"### ERRO no experimento {experiment_id} para {model_type}: {e} ###")
+        return float('inf')
 
-def run_hyperparameter_search_for_feature_set(feature_set: list, config: dict):
+def main():
+    """
+    Orquestra a busca de hiperparâmetros para todos os modelos.
+    """
+    with open('config.yaml', 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+
     search_space = config['hyperparameter_search']
-    all_best_params = {}
+    search_dir = config['paths']['search_results']
+    os.makedirs(search_dir, exist_ok=True)
 
-    for model_name, params_grid in search_space.items():
-        keys, values = zip(*params_grid.items())
+    champion_configs = {}
+    full_report = []
+
+    for model_type, grid in search_space.items():
+        print(f"\n{'#'*80}\n### Iniciando busca para: {model_type.upper()} ###\n{'#'*80}")
+
+        keys, values = zip(*grid.items())
         experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
-
-        print(f"\n{'#'*80}\nIniciando busca para o modelo: {model_name.upper()} com {len(feature_set)} features\n{'#'*80}")
 
         results = []
         for i, params in enumerate(experiments):
-            performance = run_training_job(model_name, params.copy(), i, feature_set)
-            if performance:
-                params.update(performance)
-                results.append(params)
+            val_mae = run_training_job(model_type, params, i, search_dir)
+            result_row = params.copy()
+            result_row['features'] = json.dumps(result_row['features']) # Converte lista para string para o CSV
+            result_row['val_mae'] = val_mae
+            results.append(result_row)
+            full_report.append({'model_type': model_type, **result_row})
 
         if not results:
-            print(f"Nenhum resultado obtido para {model_name}. Pulando.")
+            print(f"Nenhum resultado válido para {model_type}. Pulando.")
             continue
 
         results_df = pd.DataFrame(results)
-        best_params = results_df.loc[results_df['val_mae'].idxmin()].to_dict()
-        all_best_params[model_name] = best_params
+        best_params_row = results_df.loc[results_df['val_mae'].idxmin()]
+        best_params = best_params_row.to_dict()
 
-        print(f"\n* Busca para {model_name.upper()} concluída. Melhores Hiperparâmetros Encontrados:")
-        print(pd.Series(best_params).to_string())
-        print("*"*80)
+        best_params['features'] = json.loads(best_params['features'])
+        del best_params['val_mae']
+        champion_configs[f'champion_{model_type}'] = best_params
 
-    return all_best_params
+        print(f"\n* Melhor configuração para {model_type.upper()}:")
+        print(json.dumps(best_params, indent=2))
+
+    report_path = os.path.join(search_dir, f"full_search_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    pd.DataFrame(full_report).to_csv(report_path, index=False)
+    print(f"\nRelatório completo da busca salvo em: {report_path}")
+
+    champion_config_path = os.path.join(search_dir, 'champion_config.yaml')
+    with open(champion_config_path, 'w', encoding='utf-8') as f:
+        yaml.dump(champion_configs, f, default_flow_style=False)
+    print(f"Configuração dos campeões salva em: {champion_config_path}")
+
+if __name__ == "__main__":
+    main()

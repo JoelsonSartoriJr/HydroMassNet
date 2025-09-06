@@ -1,0 +1,32 @@
+champion_bnn:
+  batch_size: 128
+  features:
+  - iMAG
+  - e_iMAG
+  - logMsT
+  - logSFR22
+  - e_logMsT
+  layers: 128-64
+  learning_rate: 0.001
+champion_dbnn:
+  batch_size: 256
+  core_layers: 256-128
+  features:
+  - iMAG
+  - e_iMAG
+  - logMsT
+  - logSFR22
+  - e_logMsT
+  head_layers: '64'
+  learning_rate: 0.0005
+champion_vanilla:
+  batch_size: 64
+  dropout: 0.1
+  features:
+  - iMAG
+  - e_iMAG
+  - logMsT
+  - logSFR22
+  - e_logMsT
+  layers: 256-128
+  learning_rate: 0.001

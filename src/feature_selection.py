@@ -1,95 +1,95 @@
-import pandas as pd
-import yaml
-import itertools
-import lightgbm as lgb
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-import numpy as np
-from tqdm import tqdm
-from datetime import datetime
+# file: ./src/feature_selection.py
 import os
+import yaml
+import json
+import itertools
+import pandas as pd
+from datetime import datetime
+from src.utils.commands import run_command
 
-def run_feature_selection(config: dict) -> str:
+def run_feature_eval_job(features: list, config: dict, experiment_id: int):
     """
-    Executa a seleção de features usando LightGBM e busca por combinações ideais.
+    Executa um job de treinamento rápido para avaliar um conjunto de features.
 
-    Parameters
-    ----------
-    config : dict
-        Dicionário de configurações do projeto.
+    Args:
+        features (list): O conjunto de features a ser testado.
+        config (dict): O dicionário de configuração principal.
+        experiment_id (int): Um identificador único para o experimento.
 
-    Returns
-    -------
-    str
-        O caminho do arquivo com os resultados da seleção.
+    Returns:
+        float: O MAE de validação para o conjunto de features, ou infinito em caso de erro.
     """
-    print("--- Iniciando o processo de Seleção de Features ---")
+    model_cfg = config['feature_selection']['evaluation_model_config']
+    model_cfg['features'] = features
 
-    data = pd.read_csv(config['paths']['processed_data'])
-    candidate_features = config['feature_selection']['candidates']
-    target = config['target_column']
-    candidate_features = [f for f in candidate_features if f in data.columns]
-    print(f"Testando combinações de {len(candidate_features)} features candidatas.")
+    save_dir = config['paths']['feature_selection_results']
+    save_path = os.path.join(save_dir, f"feature_eval_exp_{experiment_id}")
 
-    X = data[candidate_features]
-    y = data[target]
+    command = [
+        'poetry', 'run', 'python', '-m', 'src.train',
+        '--model_type', 'vanilla',
+        '--model_config', json.dumps(model_cfg),
+        '--save_path', save_path
+    ]
+    try:
+        output = run_command(command)
+        performance_str = output.strip().split('\n')[-1]
+        performance = json.loads(performance_str)
+        return performance['val_mae']
+    except (RuntimeError, json.JSONDecodeError, IndexError) as e:
+        print(f"### ERRO no experimento de feature selection {experiment_id}: {e} ###")
+        return float('inf')
 
-    scaler_x = MinMaxScaler()
-    X_scaled = scaler_x.fit_transform(X)
-    X_scaled = pd.DataFrame(X_scaled, columns=candidate_features)
+def main():
+    """
+    Orquestra a seleção do melhor conjunto de features.
+    """
+    with open('config.yaml', 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_scaled, y,
-        test_size=config['data_processing']['val_split'],
-        random_state=config['seed']
-    )
+    fs_config = config['feature_selection']
+    base_features = fs_config['candidate_features']
+    min_features = fs_config['min_features']
 
-    results = []
-    min_features = config['feature_selection']['min_features']
+    results_dir = config['paths']['feature_selection_results']
+    os.makedirs(results_dir, exist_ok=True)
+
+    print(f"Iniciando a busca pelo melhor conjunto de features a partir de {len(base_features)} candidatas.")
 
     all_combinations = []
-    for i in range(min_features, len(candidate_features) + 1):
-        all_combinations.extend(itertools.combinations(candidate_features, i))
+    for i in range(min_features, len(base_features) + 1):
+        all_combinations.extend(itertools.combinations(base_features, i))
 
-    print(f"Total de combinações a serem testadas: {len(all_combinations)}")
+    print(f"Total de {len(all_combinations)} combinações de features a serem testadas.")
 
-    for combo in tqdm(all_combinations, desc="Testando Combinações de Features"):
-        combo_list = list(combo)
-
-        lgbm = lgb.LGBMRegressor(random_state=config['seed'], n_estimators=200, verbose=-1)
-        lgbm.fit(X_train[combo_list], y_train)
-
-        y_pred = lgbm.predict(X_val[combo_list])
-        rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-        r2 = r2_score(y_val, y_pred)
-
-        results.append({
-            'num_features': len(combo_list),
-            'features': ", ".join(combo_list),
-            'rmse': rmse,
-            'r2': r2
-        })
+    results = []
+    for i, features in enumerate(all_combinations):
+        feature_list = list(features)
+        print(f"\n--- Testando combinação {i+1}/{len(all_combinations)}: {feature_list} ---")
+        val_mae = run_feature_eval_job(feature_list, config, i)
+        results.append({'features': ','.join(feature_list), 'num_features': len(feature_list), 'val_mae': val_mae})
 
     results_df = pd.DataFrame(results)
-    results_df = results_df.sort_values(by=['r2', 'rmse'], ascending=[False, True])
+    best_feature_set_row = results_df.loc[results_df['val_mae'].idxmin()]
+    best_features = best_feature_set_row['features'].split(',')
 
-    results_dir = config['paths']['search_results']
-    os.makedirs(results_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    results_filename = os.path.join(results_dir, f'feature_selection_results_{timestamp}.csv')
-    results_df.to_csv(results_filename, index=False)
+    report_path = os.path.join(results_dir, f"feature_selection_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    results_df.to_csv(report_path, index=False)
 
-    print("\n" + "="*80)
-    print("--- Seleção de Features Concluída ---")
-    print(f"Resultados salvos em: {results_filename}")
-    print("\n--- 5 Melhores Combinações de Features Encontradas ---")
-    print(results_df.head(5).to_string())
-    print("="*80)
+    print("\n" + "*"*80)
+    print("Busca de Features Concluída!")
+    print(f"Relatório completo salvo em: {report_path}")
+    print(f"Melhor conjunto de features encontrado ({len(best_features)} features) com val_mae={best_feature_set_row['val_mae']:.4f}:")
+    print(best_features)
+    print("*"*80 + "\n")
 
-    return results_filename
+    for model_type in config['hyperparameter_search']:
+        config['hyperparameter_search'][model_type]['features'] = [best_features]
+
+    with open('config.yaml', 'w', encoding='utf-8') as f:
+        yaml.dump(config, f)
+
+    print("Arquivo 'config.yaml' foi atualizado com o melhor conjunto de features.")
 
 if __name__ == "__main__":
-    with open('config.yaml', 'r') as f:
-        config_data = yaml.safe_load(f)
-    run_feature_selection(config_data)
+    main()
