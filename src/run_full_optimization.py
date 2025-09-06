@@ -8,9 +8,11 @@ import numpy as np
 # Adiciona o diretório raiz ao path para encontrar o pacote 'src'
 sys.path.append(os.getcwd())
 
-from feature_selection import run_feature_selection
-from hyperparameter_search import run_hyperparameter_search_for_feature_set
+# 🔧 Corrigido para usar imports de pacote
+from src.feature_selection import run_feature_selection
+from src.hyperparameter_search import run_hyperparameter_search_for_feature_set
 from src.utils.plotting import plot_full_optimization_results
+
 
 def main():
     """
@@ -20,7 +22,7 @@ def main():
         config = yaml.safe_load(f)
 
     # --- ESTÁGIO 1: SELEÇÃO DE FEATURES ---
-    print("#"*80 + "\n### ESTÁGIO 1: SELEÇÃO DE FEATURES ###\n" + "#"*80)
+    print("#" * 80 + "\n### ESTÁGIO 1: SELEÇÃO DE FEATURES ###\n" + "#" * 80)
     feature_results_path = run_feature_selection(config)
     if not feature_results_path:
         print("Seleção de features falhou. Abortando.")
@@ -30,11 +32,11 @@ def main():
     top_n = config['feature_selection']['top_n_to_tune']
     best_feature_sets = [s.split(', ') for s in feature_results_df.head(top_n)['features']]
 
-    print("\n" + "#"*80 + f"\n### TOP {top_n} CONJUNTOS DE FEATURES ENCONTRADOS ###\n" + "#"*80)
+    print("\n" + "#" * 80 + f"\n### TOP {top_n} CONJUNTOS DE FEATURES ENCONTRADOS ###\n" + "#" * 80)
     [print(f"  {i+1}. {fset}") for i, fset in enumerate(best_feature_sets)]
 
     # --- ESTÁGIO 2: BUSCA DE HIPERPARÂMETROS ---
-    print("\n" + "#"*80 + f"\n### ESTÁGIO 2: BUSCA DE HIPERPARÂMETROS ###\n" + "#"*80)
+    print("\n" + "#" * 80 + f"\n### ESTÁGIO 2: BUSCA DE HIPERPARÂMETROS ###\n" + "#" * 80)
     final_results = []
     for i, fset in enumerate(best_feature_sets):
         print(f"\n--- INICIANDO BUSCA PARA CONJUNTO #{i+1}/{len(best_feature_sets)} | Features: {fset} ---")
@@ -54,7 +56,7 @@ def main():
     report_path = os.path.join(config['paths']['search_results'], f'full_report_{timestamp}.csv')
     final_df.to_csv(report_path, index=False)
 
-    print("\n" + "#"*80 + "\n### OTIMIZAÇÃO COMPLETA CONCLUÍDA! ###\n" + "#"*80)
+    print("\n" + "#" * 80 + "\n### OTIMIZAÇÃO COMPLETA CONCLUÍDA! ###\n" + "#" * 80)
     print(f"Relatório final salvo em: {report_path}")
     print("\n--- MELHOR COMBINAÇÃO GERAL ENCONTRADA ---")
     print(final_df.head(1).to_string())
@@ -73,7 +75,10 @@ def main():
         # Monta o dicionário de configuração para este campeão
         config_entry = {}
         # Lista de colunas que não são hiperparâmetros
-        params_to_exclude = ['model', 'feature_set_rank', 'val_loss', 'val_mae', 'loss', 'mae', 'mse', 'val_mse', 'val_rmse', 'rmse']
+        params_to_exclude = [
+            'model', 'feature_set_rank', 'val_loss', 'val_mae',
+            'loss', 'mae', 'mse', 'val_mse', 'val_rmse', 'rmse'
+        ]
 
         for key, value in row.items():
             # Só adiciona se for um hiperparâmetro e não for um valor nulo (NaN)
@@ -93,6 +98,7 @@ def main():
     # Plotar gráfico final
     plot_path = os.path.join(config['paths']['plots'], f'optimization_summary_{timestamp}.png')
     plot_full_optimization_results(final_df, plot_path)
+
 
 if __name__ == "__main__":
     main()

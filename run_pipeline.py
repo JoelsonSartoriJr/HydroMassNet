@@ -42,7 +42,7 @@ def main():
     histories = {}
 
     for model_name in models_to_run:
-        run_command(['poetry', 'run', 'python', 'src/train.py', '--model', model_name])
+        run_command(['poetry', 'run', 'python', '-m', 'src.train', '--model', model_name])
         run_command(['poetry', 'run', 'python', 'src/evaluate.py', '--model', model_name])
 
         prediction_path = os.path.join(config['paths']['saved_models'], f'{model_name}_predictions.csv')
