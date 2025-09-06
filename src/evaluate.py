@@ -1,101 +1,72 @@
-import argparse
-import yaml
 import os
-import numpy as np
+import argparse
 import pandas as pd
 import tensorflow as tf
+import numpy as np
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from src.data import DataHandler
-from src.models.bayesian_dense_regression import BayesianDenseRegression
-from src.models.bayesian_density_network import BayesianDensityNetwork
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Input
-from tqdm import tqdm
-
-def create_vanilla_model(layer_dims, input_shape, dropout_rate):
-    """
-    Cria um modelo sequencial simples usando a API funcional do Keras.
-
-    Parameters
-    ----------
-    layer_dims : list
-        Lista de inteiros com as dimensões de cada camada.
-    input_shape : tuple
-        O formato de entrada do modelo.
-    dropout_rate : float
-        Taxa de dropout para as camadas ocultas.
-
-    Returns
-    -------
-    tf.keras.Model
-        O modelo Keras.
-    """
-    layers = [Input(shape=input_shape, name="input_layer")]
-    for units in layer_dims[:-1]:
-        layers.extend([Dense(units, activation='relu'), Dropout(dropout_rate)])
-    layers.append(Dense(layer_dims[-1]))
-    return Sequential(layers, name='vanilla')
+import yaml
 
 def main(args):
-    """
-    Função principal para avaliar um modelo.
-    """
-    with open('config.yaml', 'r') as f:
+    # Config
+    with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
+    # Garantir test_split default
+    if "data_processing" not in config:
+        config["data_processing"] = {}
+    if "test_split" not in config["data_processing"]:
+        config["data_processing"]["test_split"] = 0.2
+
     data_handler = DataHandler(config)
-    _, _, _, _, x_test, y_test, features = data_handler.get_full_dataset_and_splits()
+    _, _, _, _, x_test, y_test, _ = data_handler.get_full_dataset_and_splits()
 
-    model_config = config['models'][args.model]
-    model_path = os.path.join(config['paths']['saved_models'], model_config['save_name'])
-    input_shape = (len(features),)
-
-    if args.model == 'bnn':
-        model = BayesianDenseRegression(model_config['layers'])
-        model.build((None, *input_shape))
-    elif args.model == 'dbnn':
-        model = BayesianDensityNetwork(model_config['core_layers'], model_config['head_layers'])
-        model.build((None, *input_shape))
-    elif args.model == 'vanilla':
-        layers = model_config['layers'][1:]
-        model = create_vanilla_model(layers, input_shape, model_config['dropout'])
+    # Modelo
+    if args.model == "vanilla":
+        from src.models.vanilla_network import VanillaNetwork
+        model = VanillaNetwork(input_shape=(x_test.shape[1],), config={"layers": "64-32"})
+    elif args.model == "bnn":
+        from src.models.bayesian_dense_network import BayesianDenseNetwork
+        model = BayesianDenseNetwork(input_shape=(x_test.shape[1],), config={"layers": "128-64"})
+    elif args.model == "dbnn":
+        from src.models.bayesian_density_network import BayesianDensityNetwork
+        model = BayesianDensityNetwork(input_shape=(x_test.shape[1],), config={"layers": "128-64"})
     else:
-        raise ValueError(f"Modelo '{args.model}' não é suportado.")
+        raise ValueError(f"Modelo desconhecido: {args.model}")
+
+    # Pesos
+    model_path = os.path.join(config["paths"]["saved_models"], f"{args.model}.weights.h5")
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Modelo não encontrado em {model_path}")
 
     model.compile(optimizer=tf.keras.optimizers.Adam())
     model.load_weights(model_path)
+    print(f"[✔] Pesos carregados de {model_path}")
 
-    print(f"Avaliando o modelo {args.model.upper()}...")
-
-    if args.model in ['bnn', 'dbnn']:
-        n_samples = 100
-        predictions_samples = []
-        for _ in tqdm(range(n_samples), desc=f"Amostrando {args.model.upper()}"):
-            y_pred_dist = model(x_test, sampling=True)
-            predictions_samples.append(y_pred_dist.mean().numpy())
-
-        predictions_samples = np.array(predictions_samples)
-        y_pred_mean = predictions_samples.mean(axis=0)
-        y_pred_std = predictions_samples.std(axis=0)
-
-        results_df = pd.DataFrame({
-            'y_true': y_test.flatten(),
-            'y_pred_mean': y_pred_mean.flatten(),
-            'y_pred_std': y_pred_std.flatten()
-        })
+    # Predição
+    y_pred = model.predict(x_test)
+    if y_pred.ndim > 1 and y_pred.shape[1] > 1:
+        y_pred_mean = np.mean(y_pred, axis=1)
+        y_pred_std = np.std(y_pred, axis=1)
     else:
-        y_pred = model.predict(x_test)
-        results_df = pd.DataFrame({
-            'y_true': y_test.flatten(),
-            'y_pred_mean': y_pred.flatten(),
-            'y_pred_std': np.zeros_like(y_pred.flatten())
-        })
+        y_pred_mean = y_pred.flatten()
+        y_pred_std = np.zeros_like(y_pred_mean)
 
-    output_path = os.path.join(config['paths']['saved_models'], f'{args.model}_predictions.csv')
-    results_df.to_csv(output_path, index=False)
-    print(f"Predições (com incerteza) salvas em: {output_path}")
+    # Métricas
+    mae = mean_absolute_error(y_test, y_pred_mean)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred_mean))
+    r2 = r2_score(y_test, y_pred_mean)
+    print(f"[METRICS] {args.model.upper()} -> MAE={mae:.3f}, RMSE={rmse:.3f}, R²={r2:.3f}")
+
+    # Salvar
+    save_dir = config["paths"]["saved_models"]
+    os.makedirs(save_dir, exist_ok=True)
+    pred_path = os.path.join(save_dir, f"{args.model}_predictions.csv")
+    pd.DataFrame({"y_true": y_test, "y_pred_mean": y_pred_mean, "y_pred_std": y_pred_std}).to_csv(pred_path, index=False)
+    print(f"[✔] Predições salvas em: {pred_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Avaliador de Modelos para HydroMassNet")
-    parser.add_argument('--model', type=str, required=True, choices=['bnn', 'dbnn', 'vanilla'], help='Qual modelo avaliar.')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, required=True, help="Nome do modelo (bnn, dbnn, vanilla)")
     args = parser.parse_args()
     main(args)

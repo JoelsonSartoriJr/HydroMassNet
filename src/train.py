@@ -1,81 +1,57 @@
-import argparse
-import yaml
 import os
-import json
-import pandas as pd
 import tensorflow as tf
-
-from .data import DataHandler
-from .models.bayesian_dense_network import BayesianDenseNetwork
-from .models.bayesian_density_network import BayesianDensityNetwork
-from .models.vanilla_network import VanillaNetwork
-from .utils.train_utils import setup_device # Importação centralizada
+import pandas as pd
+from src.data import DataHandler
 
 def train(model_name, features, exp_config, main_config):
-    """Função principal de treinamento unificada e final."""
-    data_handler = DataHandler(config=main_config, feature_override=features)
+    """
+    Treina um modelo dado seu nome e configuração.
+    Retorna um DataFrame com histórico de treinamento.
+    """
+    print(f"[INFO] Iniciando treino do modelo: {model_name.upper()}")
+
+    # Dados
+    data_handler = DataHandler(main_config)
     x_train, y_train, x_val, y_val, _, _, _ = data_handler.get_full_dataset_and_splits()
 
-    input_shape = (len(features),)
+    # Modelo
+    if model_name == "vanilla":
+        from src.models.vanilla_network import VanillaNetwork
+        model = VanillaNetwork(input_shape=(x_train.shape[1],), config=exp_config)
+    elif model_name == "bnn":
+        from src.models.bayesian_dense_network import BayesianDenseNetwork
+        model = BayesianDenseNetwork(input_shape=(x_train.shape[1],), config=exp_config)
+    elif model_name == "dbnn":
+        from src.models.bayesian_density_network import BayesianDensityNetwork
+        model = BayesianDensityNetwork(input_shape=(x_train.shape[1],), config=exp_config)
+    else:
+        raise ValueError(f"Modelo desconhecido: {model_name}")
 
-    model_map = {
-        'bnn': BayesianDenseNetwork,
-        'dbnn': BayesianDensityNetwork,
-        'vanilla': VanillaNetwork
-    }
-
-    if model_name not in model_map:
-        raise ValueError(f"Modelo '{model_name}' não reconhecido.")
-
-    model = model_map[model_name](input_shape=input_shape, config=exp_config)
-
-    learning_rate = exp_config['learning_rate']
-    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-
+    # Compilar
+    optimizer = tf.keras.optimizers.Adam(learning_rate=exp_config.get("learning_rate", 1e-3))
     model.compile(optimizer=optimizer)
 
-    callbacks = [
-        tf.keras.callbacks.EarlyStopping(
-            monitor='val_mae',
-            patience=main_config['training']['patience'],
-            mode='min',
-            restore_best_weights=True
-        )
-    ]
-
+    # Treinar
     history = model.fit(
-        x_train, y_train,
+        x_train,
+        y_train,
         validation_data=(x_val, y_val),
-        epochs=main_config['training']['epochs'],
-        batch_size=exp_config.get('batch_size', 64),
-        verbose=0,
-        callbacks=callbacks
+        epochs=exp_config.get("epochs", 50),
+        batch_size=exp_config.get("batch_size", 32),
+        verbose=1,
     )
 
-    results_df = pd.DataFrame(history.history)
-    best_epoch_metrics = results_df.loc[results_df['val_mae'].idxmin()]
-    print(json.dumps(best_epoch_metrics.to_dict()))
+    # Salvar modelo
+    save_dir = main_config["paths"]["saved_models"]
+    os.makedirs(save_dir, exist_ok=True)
+    model_path = os.path.join(save_dir, f"{model_name}.weights.h5")
+    model.save_weights(model_path)
+    print(f"[✔] Pesos salvos em: {model_path}")
 
-if __name__ == '__main__':
-    # Configura o dispositivo (GPU/CPU)
-    setup_device()
+    # Histórico
+    hist_df = pd.DataFrame(history.history)
+    hist_path = os.path.join(save_dir, f"{model_name}_history.csv")
+    hist_df.to_csv(hist_path, index=False)
+    print(f"[✔] Histórico salvo em: {hist_path}")
 
-    parser = argparse.ArgumentParser(description="Script de Treinamento de Modelos")
-    parser.add_argument('--model_name', type=str, required=True)
-    parser.add_argument('--features', type=str, required=True)
-    parser.add_argument('--config', type=str, required=True)
-    parser.add_argument('--experiment_id', type=str, required=True)
-    args = parser.parse_args()
-
-    features_list = [f.strip() for f in args.features.split(',')]
-    experiment_config = json.loads(args.config)
-
-    with open('config/config.yaml', 'r') as f:
-        main_config_data = yaml.safe_load(f)
-
-    train(
-        model_name=args.model_name,
-        features=features_list,
-        exp_config=experiment_config,
-        main_config=main_config_data
-    )
+    return hist_df

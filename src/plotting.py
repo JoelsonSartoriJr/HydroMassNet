@@ -7,9 +7,9 @@ from sklearn.metrics import r2_score, mean_squared_error
 from scipy.stats import norm
 
 plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Latin Modern Roman"],
-    "text.usetex": True,
+    "font.family": "DejaVu Sans",
+    "text.usetex": False,            # força não usar LaTeX
+    "mathtext.fontset": "dejavusans",
     "axes.titlesize": 12,
     "axes.labelsize": 11,
     "xtick.labelsize": 9,

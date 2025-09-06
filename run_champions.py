@@ -1,47 +1,47 @@
 import os
-import subprocess
 import yaml
+import importlib
+import pandas as pd
+from datetime import datetime
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # suprimir logs TensorFlow
+
+def train_wrapper(model_type, features, exp_config, main_config):
+    train_module = importlib.import_module("src.train")
+    hist_df = train_module.train(model_type, features, exp_config, main_config)
+    if not isinstance(hist_df, pd.DataFrame):
+        raise RuntimeError("train() não retornou DataFrame.")
+    return hist_df
 
 def main():
-    """
-    Lê a configuração do modelo campeão e inicia o treinamento final.
-    """
-    print("#"*80)
-    print("### INICIANDO TREINAMENTO DO MODELO CAMPEÃO ###")
-    print("#"*80)
-
-    # Carrega a configuração principal para obter os caminhos
-    with open('config/config.yaml', 'r') as f:
+    with open("champion_config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    champion_config_path = os.path.join(config['paths']['search_results'], 'champion_config.yaml')
+    for champion_name, champion_cfg in config["champions"].items():
+        model_type = champion_cfg["model"]
+        features = champion_cfg.get("features", [])
+        exp_config = champion_cfg.get("hyperparams", {})
+        main_config = config
 
-    if not os.path.exists(champion_config_path):
-        print(f"ERRO: Arquivo de configuração do campeão não encontrado em '{champion_config_path}'")
-        print("Execute o pipeline de otimização completa primeiro.")
-        return
+        print("\n" + "#"*80)
+        print(f"### Rodando {champion_name.upper()} ###")
+        print("#"*80)
 
-    with open(champion_config_path, 'r') as f:
-        champion_model_name = yaml.safe_load(f)['champion_model']['model']
+        try:
+            history_df = train_wrapper(model_type, features, exp_config, main_config)
+            save_dir = os.path.join("results", "champions", datetime.now().strftime("%Y%m%d_%H%M%S"))
+            os.makedirs(save_dir, exist_ok=True)
+            hist_path = os.path.join(save_dir, f"{champion_name}_history.csv")
+            history_df.to_csv(hist_path, index=False)
+            print(f"[✔] Histórico salvo em {hist_path}")
+        except Exception as e:
+            print(f"[!] Erro durante treino de {champion_name}: {e}")
 
-    print(f"Modelo campeão identificado: {champion_model_name.upper()}")
-
-    # Constrói e executa o comando para treinar o modelo final
-    command = [
-        'python', '-m', 'src.train_final',
-        '--config_path', champion_config_path
-    ]
-
-    print(f"Executando comando: {' '.join(command)}")
-
-    # O PWD (diretório de trabalho atual) já é a raiz do projeto
-    subprocess.run(command, check=True)
-
-    print("\n" + "#"*80)
-    print("### TREINAMENTO DO MODELO CAMPEÃO CONCLUÍDO! ###")
-    print("O próximo passo é avaliar o modelo no conjunto de teste.")
-    print("#"*80)
-
+        # Avaliar modelo
+        try:
+            os.system(f"poetry run python -m src.evaluate --model {model_type}")
+        except Exception as e:
+            print(f"[!] Avaliação falhou para {champion_name}: {e}")
 
 if __name__ == "__main__":
     main()
