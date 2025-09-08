@@ -69,7 +69,7 @@ def build_complete_dataset(save_path='data/master_dataset.csv', galaxy_sample_li
     JOIN
         SpecObj AS s ON s.bestObjID = p.objID
     WHERE
-        p.type = 3 AND s.zStatus = 4 AND s.zWarning = 0 AND s.sciencePrimary = 1
+        p.type = 3 AND s.zWarning = 0 AND s.sciencePrimary = 1
     """
 
     sdss_df = query_sdss_api(sdss_query)
