@@ -15,21 +15,21 @@ def query_sdss_api(sql_query):
     # Endpoint da API do SciServer CasJobs
     url = "https://skyserver.sdss.org/casjobs/RestAPI/contexts/dr17/query"
 
-    # Parâmetros para a requisição
-    params = {
+    # Parâmetros para a requisição POST
+    data_params = {
         'query': sql_query,
         'format': 'csv' # Pedimos o resultado em formato CSV
     }
 
     print("Enviando consulta para a API do SDSS SciServer...")
     try:
-        response = requests.get(url, params=params, timeout=300) # Timeout de 5 minutos
+        # A API do CasJobs espera um método POST
+        response = requests.post(url, data=data_params, timeout=300) # Timeout de 5 minutos
 
         # Verifica se a requisição foi bem-sucedida
         response.raise_for_status()
 
         # A resposta vem como texto, precisamos convertê-la em um DataFrame
-        # Pulamos a primeira linha que é o cabeçalho do resultado da query
         csv_data = StringIO(response.text)
         df = pd.read_csv(csv_data)
 
