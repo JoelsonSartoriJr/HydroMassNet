@@ -1,3 +1,4 @@
+# file: ./config.yaml
 project_name: HydroMassNet
 seed: 1601
 
@@ -19,13 +20,15 @@ target_column: logMHI
 training:
   epochs: 300
   patience: 35
-  enable_mixed_precision: true # Habilita/desabilita precisão mista
+  enable_mixed_precision: true
 
 logging:
-  level: INFO # Níveis: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
   format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 feature_selection:
+  # Adicione um valor apropriado para a sua máquina (ex: 4 para 8 CPUs)
+  num_parallel_jobs: 4
   min_features: 5
   candidate_features:
     - iMAG
@@ -43,17 +46,8 @@ feature_selection:
     batch_size: 128
     layers: '64-32'
     dropout: 0.2
-    features:
-      - iMAG
-      - e_iMAG
-      - logMsT
-      - logSFR22
-      - e_logMsT
-      - Dist
-      - RVel
-      - Ag
-      - Ai
-      - surface_brightness_proxy
+    # A lista de 'features' aqui é desnecessária, pois o script de seleção
+    # injeta as combinações corretas durante a execução.
 
 hyperparameter_search:
   vanilla:
