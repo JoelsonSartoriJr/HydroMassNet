@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hydromassnet"
-version = "0.1.0"
+version = "0.2.0"
 description = "Bayesian Neural Networks to estimate neutral hydrogen mass in galaxies."
 authors = ["Joelson Sartori Junior <joelsonsartori@gmail.com>"]
 readme = "README.md"
@@ -9,7 +9,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
-tensorflow = "^2.16.1"
+tensorflow = { version = "^2.16.1", extras = ["and-cuda"] }
 tensorflow-probability = {version = "^0.24.0", extras = ["tf"]}
 scikit-learn = "^1.5.0"
 pandas = "^2.2.2"

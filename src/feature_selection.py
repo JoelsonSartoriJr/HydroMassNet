@@ -1,95 +1,92 @@
-# file: ./src/feature_selection.py
 import os
+import sys
 import yaml
 import json
-import itertools
 import pandas as pd
+from itertools import combinations
 from datetime import datetime
+import logging
+
+# Adiciona o diretório raiz ao path e configura logging
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.utils.logging_config import setup_logging
 from src.utils.commands import run_command
+setup_logging()
+logger = logging.getLogger(__name__)
 
-def run_feature_eval_job(features: list, config: dict, experiment_id: int):
+def run_feature_selection():
     """
-    Executa um job de treinamento rápido para avaliar um conjunto de features.
-
-    Args:
-        features (list): O conjunto de features a ser testado.
-        config (dict): O dicionário de configuração principal.
-        experiment_id (int): Um identificador único para o experimento.
-
-    Returns:
-        float: O MAE de validação para o conjunto de features, ou infinito em caso de erro.
+    Executa a seleção de features treinando um modelo base com diferentes combinações.
     """
-    model_cfg = config['feature_selection']['evaluation_model_config']
-    model_cfg['features'] = features
-
-    save_dir = config['paths']['feature_selection_results']
-    save_path = os.path.join(save_dir, f"feature_eval_exp_{experiment_id}")
-
-    command = [
-        'poetry', 'run', 'python', '-m', 'src.train',
-        '--model_type', 'vanilla',
-        '--model_config', json.dumps(model_cfg),
-        '--save_path', save_path
-    ]
-    try:
-        output = run_command(command)
-        performance_str = output.strip().split('\n')[-1]
-        performance = json.loads(performance_str)
-        return performance['val_mae']
-    except (RuntimeError, json.JSONDecodeError, IndexError) as e:
-        print(f"### ERRO no experimento de feature selection {experiment_id}: {e} ###")
-        return float('inf')
-
-def main():
-    """
-    Orquestra a seleção do melhor conjunto de features.
-    """
+    logger.info("Iniciando processo de seleção de features.")
     with open('config.yaml', 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
     fs_config = config['feature_selection']
-    base_features = fs_config['candidate_features']
+    candidate_features = fs_config['candidate_features']
     min_features = fs_config['min_features']
-
+    model_config = fs_config['evaluation_model_config']
+    
     results_dir = config['paths']['feature_selection_results']
     os.makedirs(results_dir, exist_ok=True)
-
-    print(f"Iniciando a busca pelo melhor conjunto de features a partir de {len(base_features)} candidatas.")
+    logger.info(f"Diretório de resultados: {results_dir}")
 
     all_combinations = []
-    for i in range(min_features, len(base_features) + 1):
-        all_combinations.extend(itertools.combinations(base_features, i))
+    for r in range(min_features, len(candidate_features) + 1):
+        all_combinations.extend(combinations(candidate_features, r))
 
-    print(f"Total de {len(all_combinations)} combinações de features a serem testadas.")
-
+    logger.info(f"Total de {len(all_combinations)} combinações de features a serem testadas.")
+    
     results = []
-    for i, features in enumerate(all_combinations):
-        feature_list = list(features)
-        print(f"\n--- Testando combinação {i+1}/{len(all_combinations)}: {feature_list} ---")
-        val_mae = run_feature_eval_job(feature_list, config, i)
-        results.append({'features': ','.join(feature_list), 'num_features': len(feature_list), 'val_mae': val_mae})
+    for i, combo in enumerate(all_combinations):
+        features = list(combo)
+        logger.info(f"--- Testando combinação {i+1}/{len(all_combinations)}: {features} ---")
+        
+        current_model_config = model_config.copy()
+        current_model_config['features'] = features
 
-    results_df = pd.DataFrame(results)
-    best_feature_set_row = results_df.loc[results_df['val_mae'].idxmin()]
-    best_features = best_feature_set_row['features'].split(',')
+        try:
+            # O script `train.py` já está otimizado para GPU
+            process_output = run_command([
+                'poetry', 'run', 'python', '-m', 'src.train',
+                '--model_type', 'vanilla',
+                '--model_config', json.dumps(current_model_config),
+                '--save_path', os.path.join(results_dir, 'temp_feature_model')
+            ])
+            
+            # Extrai o JSON de performance da última linha do output
+            performance_line = [line for line in process_output.strip().split('\n') if 'val_mae' in line][-1]
+            performance = json.loads(performance_line)
+            val_mae = performance['val_mae']
+            
+            logger.info(f"Resultado para {features}: val_mae = {val_mae:.4f}")
+            results.append({
+                'features': ', '.join(features),
+                'n_features': len(features),
+                'val_mae': val_mae
+            })
 
-    report_path = os.path.join(results_dir, f"feature_selection_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        except (RuntimeError, IndexError, json.JSONDecodeError) as e:
+            logger.error(f"Falha ao treinar com a combinação {features}. Erro: {e}", exc_info=True)
+            results.append({
+                'features': ', '.join(features),
+                'n_features': len(features),
+                'val_mae': float('inf') # Pior resultado possível para combinações que falharam
+            })
+        except Exception as e:
+            logger.critical(f"Erro inesperado no processo de seleção de features: {e}", exc_info=True)
+            # Decide se deve parar ou continuar
+            continue 
+
+    logger.info("Seleção de features concluída. Salvando relatório.")
+    results_df = pd.DataFrame(results).sort_values(by='val_mae', ascending=True)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = os.path.join(results_dir, f'feature_selection_report_{timestamp}.csv')
     results_df.to_csv(report_path, index=False)
-
-    print("\n" + "*"*80)
-    print("Busca de Features Concluída!")
-    print(f"Relatório completo salvo em: {report_path}")
-    print(f"Melhor conjunto de features encontrado ({len(best_features)} features) com val_mae={best_feature_set_row['val_mae']:.4f}:")
-    print(best_features)
-    print("*"*80 + "\n")
-
-    for model_type in config['hyperparameter_search']:
-        config['hyperparameter_search'][model_type]['features'] = [best_features]
-
-    with open('config.yaml', 'w', encoding='utf-8') as f:
-        yaml.dump(config, f)
-
-    print("Arquivo 'config.yaml' foi atualizado com o melhor conjunto de features.")
+    
+    logger.info(f"Relatório de seleção de features salvo em: {report_path}")
+    logger.info(f"Melhor combinação encontrada:\n{results_df.iloc[0]}")
 
 if __name__ == "__main__":
-    main()
+    run_feature_selection()
