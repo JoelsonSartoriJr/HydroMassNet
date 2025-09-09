@@ -6,9 +6,8 @@ import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from datetime import datetime
 import logging
-import uuid # Importa uuid para gerar IDs únicos
+import uuid
 
-# Adiciona o diretório raiz ao path e configura logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.utils.logging_config import setup_logging
 from src.utils.commands import run_command
@@ -16,9 +15,6 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 def run_hyperparameter_search():
-    """
-    Executa a busca de hiperparâmetros para diferentes tipos de modelos.
-    """
     logger.info("Iniciando busca de hiperparâmetros.")
     with open('config.yaml', 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
@@ -43,8 +39,7 @@ def run_hyperparameter_search():
         for i, params in enumerate(grid):
             logger.info(f"--- Testando {model_type.upper()} | Combinação {i+1}/{len(grid)}: {params} ---")
             
-            # Gera um nome de arquivo único para cada execução
-            unique_id = str(uuid.uuid4())
+            unique_id = str(uuid.uuid4().hex)
             save_path = os.path.join(results_dir, f'temp_model_{model_type}_{unique_id}')
 
             try:
@@ -52,7 +47,7 @@ def run_hyperparameter_search():
                     'poetry', 'run', 'python', '-m', 'src.train',
                     '--model_type', model_type,
                     '--model_config', json.dumps(params),
-                    '--save_path', save_path # Usa o caminho único
+                    '--save_path', save_path
                 ])
                 
                 performance_line = [line for line in process_output.strip().split('\n') if 'val_mae' in line][-1]
@@ -70,11 +65,10 @@ def run_hyperparameter_search():
                     logger.info(f"*** Novo melhor resultado para {model_type.upper()}: {best_mae:.4f} ***")
 
             except (RuntimeError, IndexError, json.JSONDecodeError) as e:
-                logger.error(f"Falha ao treinar com os parâmetros {params}. Erro: {e}", exc_info=True)
+                logger.error(f"Falha ao treinar com os parâmetros {params}. Erro: {e}", exc_info=False)
                 params.update({'val_mae': float('inf'), 'model_type': model_type})
                 full_report.append(params)
             finally:
-                # Limpa o arquivo de pesos temporário após o uso
                 if os.path.exists(f"{save_path}.weights.h5"):
                     os.remove(f"{save_path}.weights.h5")
 
