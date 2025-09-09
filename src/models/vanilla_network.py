@@ -1,37 +1,44 @@
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Input
+from tensorflow.keras.models import Model
+from ..utils.train_utils import parse_layers
 
-class VanillaNetwork(tf.keras.Model):
+class VanillaNetwork:
     """
-    Construtor para um modelo de rede neural densa simples (Vanilla).
+    Classe para construir uma Rede Neural Densa padrão (Vanilla).
     """
-    def __init__(self, input_shape: tuple, config: dict, name: str = 'vanilla'):
-        super(VanillaNetwork, self).__init__(name=name)
+    def __init__(self, n_features: int, layers_config: str, dropout_rate: float, learning_rate: float):
+        self.n_features = n_features
+        self.layers_config = layers_config
+        self.dropout_rate = dropout_rate
+        self.learning_rate = learning_rate
 
-        layer_dims = [int(u) for u in config['layers'].split('-')] + [1]
-        dropout_rate = config.get('dropout', 0.2)
-
-        layers = [Input(shape=input_shape, name="input_layer")]
-        for units in layer_dims[:-1]:
-            layers.extend([Dense(units, activation='relu'), Dropout(dropout_rate)])
-        layers.append(Dense(layer_dims[-1], name="output_layer"))
-
-        self.model = Sequential(layers, name='vanilla_network')
-
-    def call(self, x):
-        """Executa a passagem para a frente (forward pass)."""
-        return self.model(x)
-
-    def compile(self, optimizer):
-        """Compila o modelo com a perda e métricas padrão."""
-        super(VanillaNetwork, self).compile()
-        self.optimizer = optimizer
-        # O modelo sequencial já tem um loop de treino, então só precisamos compilar.
-        self.model.compile(optimizer=self.optimizer, loss='mean_squared_error', metrics=['mae'])
-
-    def train_step(self, data):
-        return self.model.train_step(data)
-
-    def test_step(self, data):
-        return self.model.test_step(data)
+    def get_model(self):
+        """
+        Constrói e compila o modelo Keras sequencial.
+        """
+        # Define as dimensões de entrada, ocultas e de saída
+        layer_dims = parse_layers(layers_config_str=self.layers_config, input_dim=self.n_features, output_dim=1)
+        
+        inputs = Input(shape=(self.n_features,))
+        x = inputs
+        
+        # Adiciona as camadas ocultas
+        for i, units in enumerate(layer_dims[1:-1]):
+            x = Dense(units, activation='relu', name=f'dense_{i}')(x)
+            if self.dropout_rate > 0:
+                x = Dropout(self.dropout_rate, name=f'dropout_{i}')(x)
+        
+        # Camada de saída
+        outputs = Dense(layer_dims[-1], name='output')(x)
+        
+        model = Model(inputs=inputs, outputs=outputs)
+        
+        optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
+        
+        if tf.keras.mixed_precision.global_policy().name == 'mixed_float16':
+            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
+            
+        model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=['mean_absolute_error'])
+        
+        return model
