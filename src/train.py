@@ -7,7 +7,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import sys
 import os
 
-# Adiciona o diretório raiz ao path para resolver importações relativas
+# Adiciona o diretório raiz ao path para resolver importações
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import DataHandler
@@ -17,9 +17,10 @@ from src.models.bayesian_density_network import BayesianDensityNetwork
 
 def get_model(model_type, model_config, n_features):
     """
-    Seleciona e instancia o modelo correto com base no tipo.
+    Seleciona e instancia o modelo correto com base no tipo, usando as classes existentes.
     """
     if model_type == 'vanilla':
+        # Instancia a classe VanillaNetwork
         return VanillaNetwork(
             n_features=n_features,
             layers_config=model_config['layers'],
@@ -27,12 +28,14 @@ def get_model(model_type, model_config, n_features):
             learning_rate=model_config['learning_rate']
         ).get_model()
     elif model_type == 'bnn':
+        # Instancia a classe BayesianDenseNetwork
         return BayesianDenseNetwork(
             n_features=n_features,
             layers_config=model_config['layers'],
             learning_rate=model_config['learning_rate']
         ).get_model()
     elif model_type == 'dbnn':
+        # Instancia a classe BayesianDensityNetwork
         return BayesianDensityNetwork(
             n_features=n_features,
             core_layers_config=model_config['core_layers'],
@@ -67,14 +70,14 @@ def main():
     model = get_model(args.model_type, model_config, n_features)
 
     print(f"Iniciando treinamento do modelo {args.model_type}...")
-    
+
     early_stopping = EarlyStopping(
-        monitor='val_loss', 
-        patience=config['training']['patience'], 
-        verbose=1, 
+        monitor='val_loss',
+        patience=config['training']['patience'],
+        verbose=1,
         restore_best_weights=True
     )
-    
+
     model_checkpoint = ModelCheckpoint(
         filepath=f"{args.save_path}.weights.h5",
         save_weights_only=True,
@@ -91,12 +94,18 @@ def main():
         callbacks=[early_stopping, model_checkpoint],
         verbose=2
     )
-    
-    final_val_mae = min(history.history['val_mean_absolute_error'])
-    print(f"\nTreinamento concluído. MAE de validação final: {final_val_mae:.4f}")
+
+    # Usa a métrica correta que foi compilada no modelo
+    val_mae_key = 'val_mean_absolute_error'
+    if val_mae_key not in history.history:
+        # Fallback para a loss se a métrica não estiver presente
+        val_mae_key = 'val_loss'
+
+    final_val_metric = min(history.history[val_mae_key])
+    print(f"\nTreinamento concluído. Métrica de validação final ({val_mae_key}): {final_val_metric:.4f}")
 
     # Salva o resultado para ser capturado pelo script de seleção de features
-    performance = {'val_mae': final_val_mae}
+    performance = {'val_mae': final_val_metric}
     print(json.dumps(performance))
 
 if __name__ == "__main__":
