@@ -1,72 +1,103 @@
 # file: ./src/train.py
 import argparse
-import yaml
-import os
 import json
+import yaml
 import tensorflow as tf
-import pandas as pd
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import sys
+import os
+
+# Adiciona o diretório raiz ao path para resolver importações relativas
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.data import DataHandler
-from src.models.bayesian_dense_regression import BayesianDenseRegression
+from src.models.vanilla_network import VanillaNetwork
+from src.models.bayesian_dense_network import BayesianDenseNetwork
 from src.models.bayesian_density_network import BayesianDensityNetwork
-from src.models.vanilla_network import create_vanilla_model
+
+def get_model(model_type, model_config, n_features):
+    """
+    Seleciona e instancia o modelo correto com base no tipo.
+    """
+    if model_type == 'vanilla':
+        return VanillaNetwork(
+            n_features=n_features,
+            layers_config=model_config['layers'],
+            dropout_rate=model_config.get('dropout', 0.0),
+            learning_rate=model_config['learning_rate']
+        ).get_model()
+    elif model_type == 'bnn':
+        return BayesianDenseNetwork(
+            n_features=n_features,
+            layers_config=model_config['layers'],
+            learning_rate=model_config['learning_rate']
+        ).get_model()
+    elif model_type == 'dbnn':
+        return BayesianDensityNetwork(
+            n_features=n_features,
+            core_layers_config=model_config['core_layers'],
+            head_layers_config=model_config['head_layers'],
+            learning_rate=model_config['learning_rate']
+        ).get_model()
+    else:
+        raise ValueError(f"Tipo de modelo desconhecido: {model_type}")
 
 def main():
     """
-    Ponto de entrada para treinar um modelo com uma configuração específica.
+    Ponto de entrada para o treinamento do modelo.
     """
-    parser = argparse.ArgumentParser(description="Script unificado para treinamento de modelos.")
-    parser.add_argument('--model_type', type=str, required=True, choices=['bnn', 'dbnn', 'vanilla'])
-    parser.add_argument('--model_config', type=str, required=True, help='String JSON com a configuração do modelo.')
-    parser.add_argument('--save_path', type=str, required=True, help='Caminho base para salvar os artefatos.')
+    parser = argparse.ArgumentParser(description="Treinamento de Modelos")
+    parser.add_argument('--model_type', type=str, required=True, help='Tipo de modelo (vanilla, bnn, dbnn)')
+    parser.add_argument('--model_config', type=str, required=True, help='Configuração do modelo em formato JSON')
+    parser.add_argument('--save_path', type=str, required=True, help='Caminho para salvar o modelo e pesos')
     args = parser.parse_args()
+
+    model_config = json.loads(args.model_config)
+    features = model_config['features']
 
     with open('config.yaml', 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
-    model_cfg = json.loads(args.model_config)
-    train_cfg = config['training']
+    print(f"Dispositivo de treinamento: {tf.test.gpu_device_name() if tf.test.gpu_device_name() else '/physical_device:CPU:0'}")
 
-    data_handler = DataHandler(config, feature_override=model_cfg.get('features'))
-    x_train, y_train, x_val, y_val, _, _, features_out = data_handler.get_full_dataset_and_splits()
+    data_handler = DataHandler(config_path='config.yaml')
+    X_train, y_train, X_val, y_val, _, _ = data_handler.load_and_prepare_data(features)
 
-    train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(model_cfg['batch_size']).prefetch(tf.data.AUTOTUNE)
-    val_ds = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(model_cfg['batch_size']).prefetch(tf.data.AUTOTUNE)
-    input_shape = (len(features_out),)
+    n_features = X_train.shape[1]
+    model = get_model(args.model_type, model_config, n_features)
 
-    model = None
-    if args.model_type == 'bnn':
-        layers = [int(x) for x in model_cfg['layers'].split('-')]
-        model = BayesianDenseRegression(layers, config)
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=model_cfg['learning_rate']), metrics=['mae'])
-    elif args.model_type == 'dbnn':
-        core_layers = [int(x) for x in model_cfg['core_layers'].split('-')]
-        head_layers = [int(x) for x in str(model_cfg['head_layers']).split('-')]
-        model = BayesianDensityNetwork(core_layers, head_layers, config)
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=model_cfg['learning_rate']), metrics=['mae'])
-    elif args.model_type == 'vanilla':
-        layers = [int(x) for x in model_cfg['layers'].split('-')]
-        model = create_vanilla_model(layers, input_shape, model_cfg['dropout'])
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=model_cfg['learning_rate']), loss='mean_squared_error', metrics=['mae'])
+    print(f"Iniciando treinamento do modelo {args.model_type}...")
+    
+    early_stopping = EarlyStopping(
+        monitor='val_loss', 
+        patience=config['training']['patience'], 
+        verbose=1, 
+        restore_best_weights=True
+    )
+    
+    model_checkpoint = ModelCheckpoint(
+        filepath=f"{args.save_path}.weights.h5",
+        save_weights_only=True,
+        monitor='val_loss',
+        mode='min',
+        save_best_only=True
+    )
 
-    model_path = f"{args.save_path}.weights.h5"
-    history_path = f"{args.save_path}_history.csv"
+    history = model.fit(
+        X_train, y_train,
+        validation_data=(X_val, y_val),
+        epochs=config['training']['epochs'],
+        batch_size=model_config['batch_size'],
+        callbacks=[early_stopping, model_checkpoint],
+        verbose=2
+    )
+    
+    final_val_mae = min(history.history['val_mean_absolute_error'])
+    print(f"\nTreinamento concluído. MAE de validação final: {final_val_mae:.4f}")
 
-    callbacks = [
-        tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=train_cfg['patience'], restore_best_weights=True, verbose=1),
-        tf.keras.callbacks.ModelCheckpoint(filepath=model_path, save_weights_only=True, monitor='val_loss', mode='min', save_best_only=True)
-    ]
-
-    print(f"--- Treinando modelo '{args.model_type}' ---")
-    print(json.dumps(model_cfg, indent=2))
-
-    history = model.fit(train_ds, epochs=train_cfg['epochs'], validation_data=val_ds, callbacks=callbacks, verbose=2)
-    pd.DataFrame(history.history).to_csv(history_path, index=False)
-
-    print(f"Treinamento concluído. Modelo salvo em {model_path}")
-    print(f"Histórico salvo em {history_path}")
-
-    best_val_mae = min(history.history.get('val_mae', [float('inf')]))
-    print(json.dumps({"val_mae": best_val_mae}))
+    # Salva o resultado para ser capturado pelo script de seleção de features
+    performance = {'val_mae': final_val_mae}
+    print(json.dumps(performance))
 
 if __name__ == "__main__":
     main()
