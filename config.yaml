@@ -1,3 +1,4 @@
+# file: ./config.yaml
 project_name: "HydroMassNet"
 seed: 1601
 target_column: "logMHI"
@@ -5,16 +6,89 @@ target_column: "logMHI"
 paths:
   raw_data: "data/hydromassnet_full_dataset_all_columns.csv"
   processed_data: "data/hydromassnet_processed.csv"
+  results: "results/"
+  plots: "results/plots/"
+  models: "results/models/"
 
 data_processing:
-  features:
-    - "iMAG"
-    - "e_iMAG"
-    - "logMsT"
-    - "logSFR22"
-    - "e_logMsT"
-    - "Dist"
-    - "RVel"
-    - "Ag"
-    - "Ai"
-    - "surface_brightness_proxy"
+  val_split: 0.2
+  test_split: 0.1
+
+training:
+  epochs: 500
+  patience: 25
+  evaluation_samples: 100
+
+models:
+  bnn:
+    type: "bnn"
+    features:
+      [
+        "iMAG",
+        "e_iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "Ai",
+        "surface_brightness_proxy",
+      ]
+    learning_rate: 0.0005
+    batch_size: 256
+    hidden_layers: [512, 256, 128]
+
+  dbnn:
+    type: "dbnn"
+    features:
+      [
+        "iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "surface_brightness_proxy",
+      ]
+    learning_rate: 0.001
+    batch_size: 256
+    core_layers: [512, 256]
+    head_layers: [128, 64]
+
+  vanilla:
+    type: "vanilla"
+    features:
+      [
+        "iMAG",
+        "e_iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "Ai",
+        "surface_brightness_proxy",
+      ]
+    learning_rate: 0.0005
+    batch_size: 64
+    hidden_layers: [128, 64]
+    dropout: 0.2
+
+  baseline:
+    type: "baseline"
+    features:
+      [
+        "iMAG",
+        "e_iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "Ai",
+        "surface_brightness_proxy",
+      ]

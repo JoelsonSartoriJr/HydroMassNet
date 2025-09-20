@@ -1,19 +1,13 @@
+# file: ./run_pipeline.py
 import os
 import subprocess
-import pandas as pd
 import yaml
-from src.plotting import plot_all
-from src.preprocess import clean_and_feature_engineer
+import pandas as pd
+from src.hydromassnet.preprocess import clean_and_feature_engineer
+from src.hydromassnet.plotting import plot_all
 
 def run_command(command):
-    """
-    Executa um comando no shell e verifica por erros.
-
-    Parameters
-    ----------
-    command : list
-        Lista de strings do comando a ser executado.
-    """
+    """Executa um comando no shell e verifica por erros."""
     print(f"--- Executando: {' '.join(command)} ---")
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     if result.returncode != 0:
@@ -24,9 +18,8 @@ def run_command(command):
     print(result.stdout)
 
 def main():
-    """
-    Orquestra o pipeline completo de pré-processamento, treinamento e avaliação.
-    """
+    """Orquestra o pipeline completo de pré-processamento, treino e avaliação."""
+    print("--- Carregando configuração de 'config.yaml' ---")
     with open('config.yaml', 'r') as f:
         config = yaml.safe_load(f)
 
@@ -37,28 +30,28 @@ def main():
     else:
         print("Arquivo de dados processados já existe. Pulando a etapa de pré-processamento.")
 
-    models_to_run = ['bnn', 'dbnn', 'vanilla']
+    models_to_run = config['models'].keys()
     predictions = {}
-    histories = {}
 
     for model_name in models_to_run:
-        run_command(['poetry', 'run', 'python', 'src/train.py', '--model', model_name])
-        run_command(['poetry', 'run', 'python', 'src/evaluate.py', '--model', model_name])
+        print(f"\n{'='*20} PROCESSANDO MODELO: {model_name.upper()} {'='*20}")
+        run_command(['poetry', 'run', 'python', 'train.py', '--model', model_name])
+        run_command(['poetry', 'run', 'python', 'evaluate.py', '--model', model_name])
 
-        prediction_path = os.path.join(config['paths']['saved_models'], f'{model_name}_predictions.csv')
-        history_path = os.path.join(config['paths']['saved_models'], f'{model_name}_history.csv')
+        prediction_path = os.path.join(config['paths']['results'], f'{model_name}_predictions.csv')
+        if os.path.exists(prediction_path):
+            predictions[model_name] = pd.read_csv(prediction_path)
+        else:
+            print(f"AVISO: Arquivo de predição para '{model_name}' não foi encontrado.")
 
-        predictions[model_name] = pd.read_csv(prediction_path)
-        histories[model_name] = pd.read_csv(history_path)
+    print("\n--- Gerando gráficos de avaliação ---")
+    if predictions:
+        plot_all(predictions, config)
+        print(f"\nGráficos salvos em: {config['paths']['plots']}")
+    else:
+        print("Nenhuma predição foi gerada. Gráficos não podem ser criados.")
 
-    run_command(['poetry', 'run', 'python', 'src/baseline.py'])
-    baseline_prediction_path = os.path.join(config['paths']['saved_models'], 'baseline_predictions.csv')
-    predictions['baseline'] = pd.read_csv(baseline_prediction_path)
-
-    plot_all(predictions, histories, config)
-
-    print(f"\nGráficos salvos em: {config['paths']['plots']}")
-    print("--- Pipeline concluído com sucesso! ---")
+    print("\n--- Pipeline concluído com sucesso! ---")
 
 if __name__ == "__main__":
     main()
