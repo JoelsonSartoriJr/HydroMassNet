@@ -1,99 +1,100 @@
 # HydroMassNet
 
-Welcome to HydroMassNet!
+¡Bienvenido a HydroMassNet!
 
-HydroMassNet is a repository for hydrological modeling experiments and pipelines (training, inference, evaluation). This English README provides installation steps, quick start commands and explains the project layout.
+HydroMassNet es un repositorio para experimentos y pipelines de modelado hidrológico (entrenamiento, inferencia y evaluación). Este README en Español explica instalación, inicio rápido y la estructura del proyecto.
 
-- Português: README.pt.md
+- Portugués: README.pt.md
 - English: README.en.md
 - Español: README.es.md
 
-Contents
-- About
-- Highlights
-- Prerequisites
-- Installation
-- Quick start
-- Repository structure
-- Data & results
-- Contributing
-- License
-- Contact
+Índice
+- Acerca de
+- Puntos clave
+- Requisitos
+- Instalación
+- Inicio rápido
+- Estructura del repositorio
+- Datos y resultados
+- Contribuciones
+- Licencia
+- Contacto
 
-About
-HydroMassNet contains code to train models, run predictions and evaluate results. Main scripts: train.py, predict.py, evaluate.py. Project code lives under src/.
+Acerca de
+HydroMassNet contiene el código para entrenar modelos, generar predicciones y evaluar resultados. Scripts principales: train.py, predict.py, evaluate.py. El código fuente está en src/.
 
-Highlights
-- Training and evaluation scripts.
-- Pipeline orchestration (run_pipeline.py).
-- Configuration via config.yaml.
-- Dependencies available in requirements.txt and pyproject.toml.
+Puntos clave
+- Scripts para entrenamiento y evaluación.
+- Orquestación de pipelines (run_pipeline.py).
+- Configuración mediante config.yaml.
+- Dependencias en requirements.txt y pyproject.toml.
 
-Prerequisites
-- Python 3.12 (current pinned dependencies target >=3.12).
+Requisitos
+- Python 3.12 (las dependencias actuales están fijadas para >=3.12).
 - Git.
-- Use virtual environments (venv) or Poetry for reproducible installs.
+- Se recomienda entorno virtual (venv) o Poetry.
 
-Installation (venv + pip)
-1. Create and activate venv:
+Instalación (venv + pip)
+1. Crear y activar venv:
    python3.12 -m venv .venv
    source .venv/bin/activate
-2. Install dependencies:
+2. Instalar dependencias:
    pip install -r requirements.txt
 
-Installation (Poetry)
+Instalación (Poetry)
 1. poetry install
 
-Quick start
-- Train:
+Inicio rápido
+- Entrenar:
   python train.py --config config.yaml
-- Predict:
-  python predict.py --config config.yaml --input data/<your_input>
-- Evaluate:
+- Predecir:
+  python predict.py --config config.yaml --input data/<tu_entrada>
+- Evaluar:
   python evaluate.py --predictions results/predictions.csv --targets data/targets.csv
 
-Notes:
-- Check and adjust config.yaml for data paths, hyperparameters and output paths.
-- Many dependencies (TensorFlow, CatBoost) are heavy — GPU recommended.
+Notas:
+- Ajuste config.yaml para rutas de datos, hiperparámetros y salidas.
+- Muchas dependencias pueden ser pesadas (TensorFlow, CatBoost) — se recomienda GPU.
 
-Repository structure (summary)
-- README files in three languages.
+Estructura del repositorio (resumen)
+- READMEs en tres idiomas.
 - LICENSE — MIT.
-- config.yaml — configuration file.
-- data/ — input datasets.
-- results/ — outputs and artifacts.
-- src/ — source code.
-- train.py, predict.py, evaluate.py — main scripts.
-- run_pipeline.py, run_color_plot.py — utility scripts.
+- config.yaml — archivo de configuración.
+- data/ — conjuntos de datos.
+- results/ — artefactos y salidas.
+- src/ — código fuente.
+- train.py, predict.py, evaluate.py — scripts principales.
+- run_pipeline.py, run_color_plot.py — utilidades.
 
-Suggested improvements (prioritized)
-1. Documentation & examples
-   - Add a small example dataset or a script to fetch public sample data.
-   - Provide example outputs and expected file formats.
-2. Setup & dependencies
-   - Offer lightweight dev requirements and a full requirements set.
-   - Consider supporting Python 3.10+ or specify strict reason for 3.12.
-   - Provide a Dockerfile for reproducibility.
-3. Automation & CI
-   - Add GitHub Actions for linting, basic tests and a smoke-run of the pipeline.
-4. Code quality
-   - Move reusable code into src/ packages, expose CLI entrypoints and add argument parsing.
-   - Add unit tests for core functions.
-   - Improve error handling for file I/O and configs.
-5. Data & models
-   - Specify data schema (expected columns and units).
-   - Add model versioning and artifact saving strategy.
-6. Contribution process
-   - Add CONTRIBUTING.md and templates for issues/PRs.
-7. Security
-   - Ensure .gitignore filters datasets/credentials and document data handling.
+Mejoras sugeridas (priorizadas)
+1. Documentación y ejemplos
+   - Añadir un dataset de ejemplo o script para descargar datos públicos.
+   - Incluir ejemplos de salida y formatos esperados.
+2. Instalación y dependencias
+   - Proveer requirements separados (dev / full).
+   - Valorar soporte para Python 3.10+ o documentar la necesidad de 3.12.
+   - Añadir Dockerfile para reproducibilidad.
+3. CI/CD
+   - Configurar GitHub Actions para linters, tests y ejecución mínima del pipeline.
+4. Calidad de código
+   - Organizar utilidades en src/, exponer CLI con argumentos y añadir tests.
+   - Mejor manejo de errores y validaciones.
+5. Datos y modelos
+   - Documentar el esquema de datos esperado.
+   - Incorporar versionado de modelos y guardado de artefactos.
+6. Contribuciones
+   - Añadir CONTRIBUTING.md y plantillas de PR/issue.
+7. Seguridad
+   - Asegurar que datos sensibles no estén en el repositorio (.gitignore) y documentar el manejo de datos.
 
-Contributing
-- Open issues for bugs or feature requests.
-- Fork, create a branch and open PRs. Include tests and documentation updates.
+Contribuir
+- Abra issues para errores o mejoras.
+- Haga fork, crie una rama y envie PRs con descripciones y pruebas cuando aplique.
 
-License
-MIT License — see LICENSE file.
+Licencia
+Licencia MIT — ver archivo LICENSE.
 
-Contact
-Repository owner / primary contact: Joelson Sartori Junior (GitHub)
+Contacto
+Autor principal: Joelson Sartori Junior (GitHub)
+
+Gracias por revisar HydroMassNet. ¡Las contribuciones son bienvenidas!
