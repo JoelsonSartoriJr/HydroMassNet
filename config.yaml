@@ -1,72 +1,94 @@
 # file: ./config.yaml
-project_name: HydroMassNet
+project_name: "HydroMassNet"
 seed: 1601
+target_column: "logMHI"
 
 paths:
-  raw_data: data/hydromassnet_full_dataset_all_columns.csv
-  processed_data: data/hydromassnet_processed.csv
-  results: results
-  feature_selection_results: results/feature_selection
-  search_results: results/hyperparameter_search
-  champion_results: results/champions
-  log_file: logs/pipeline.log
+  raw_data: "data/hydromassnet_full_dataset_all_columns.csv"
+  processed_data: "data/hydromassnet_processed.csv"
+  results: "results/"
+  plots: "results/plots/"
+  models: "results/models/"
 
 data_processing:
-  val_split: 0.15
-  test_split: 0.15
-
-target_column: logMHI
+  val_split: 0.2
+  test_split: 0.1
 
 training:
-  epochs: 300
-  patience: 35
-  enable_mixed_precision: true
+  epochs: 500
+  patience: 25
+  evaluation_samples: 100
 
-logging:
-  level: INFO
-  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
-feature_selection:
-  # Adicione um valor apropriado para a sua máquina (ex: 4 para 8 CPUs)
-  num_parallel_jobs: 4
-  min_features: 5
-  candidate_features:
-    - iMAG
-    - e_iMAG
-    - logMsT
-    - logSFR22
-    - e_logMsT
-    - Dist
-    - RVel
-    - Ag
-    - Ai
-    - surface_brightness_proxy
-  evaluation_model_config:
-    learning_rate: 0.001
-    batch_size: 128
-    layers: '64-32'
-    dropout: 0.2
-    # A lista de 'features' aqui é desnecessária, pois o script de seleção
-    # injeta as combinações corretas durante a execução.
-
-hyperparameter_search:
-  vanilla:
-    features:
-      - ['iMAG', 'e_iMAG', 'logMsT', 'logSFR22', 'e_logMsT']
-    learning_rate: [0.001, 0.0005]
-    batch_size: [64, 128, 256]
-    layers: ['256-128', '128-64-32', '512-256-128']
-    dropout: [0.1, 0.2, 0.3]
+models:
   bnn:
+    type: "bnn"
     features:
-      - ['iMAG', 'e_iMAG', 'logMsT', 'logSFR22', 'e_logMsT']
-    learning_rate: [0.001, 0.0005, 0.0001]
-    batch_size: [128, 256]
-    layers: ['128-64', '256-128', '256-128-64']
+      [
+        "iMAG",
+        "e_iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "Ai",
+        "surface_brightness_proxy",
+      ]
+    learning_rate: 0.0005
+    batch_size: 256
+    hidden_layers: [512, 256, 128]
+
   dbnn:
+    type: "dbnn"
     features:
-      - ['iMAG', 'e_iMAG', 'logMsT', 'logSFR22', 'e_logMsT']
-    learning_rate: [0.0005, 0.0001]
-    batch_size: [256, 512]
-    core_layers: ['256-128', '512-256', '512-256-128']
-    head_layers: ['64', '32']
+      [
+        "iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "surface_brightness_proxy",
+      ]
+    learning_rate: 0.001
+    batch_size: 256
+    core_layers: [512, 256]
+    head_layers: [128, 64]
+
+  vanilla:
+    type: "vanilla"
+    features:
+      [
+        "iMAG",
+        "e_iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "Ai",
+        "surface_brightness_proxy",
+      ]
+    learning_rate: 0.0005
+    batch_size: 64
+    hidden_layers: [128, 64]
+    dropout: 0.2
+
+  baseline:
+    type: "baseline"
+    features:
+      [
+        "iMAG",
+        "e_iMAG",
+        "logMsT",
+        "logSFR22",
+        "e_logMsT",
+        "Dist",
+        "RVel",
+        "Ag",
+        "Ai",
+        "surface_brightness_proxy",
+      ]
