@@ -1,141 +1,99 @@
-# HydroMassNet — Bayesian Neural Networks for Neutral Hydrogen Mass
+# HydroMassNet
 
-[Português](README.pt.md) | [English](README.en.md) | [Español](README.es.md)
+Welcome to HydroMassNet!
 
-HydroMassNet is an end-to-end pipeline to estimate neutral hydrogen mass (log10(M_HI)) in galaxies using Bayesian Neural Networks (BNNs). It covers data acquisition (from astronomical catalogs), preprocessing, feature engineering, model training/evaluation with uncertainty, model comparison, and final plots suitable for publication.
+HydroMassNet is a repository for hydrological modeling experiments and pipelines (training, inference, evaluation). This English README provides installation steps, quick start commands and explains the project layout.
 
-- Core ML stack: TensorFlow 2.x, TensorFlow Probability, scikit-learn, LightGBM.
-- Astronomy data access: astroquery (VizieR, XMatch).
-- Reproducible configuration via YAML.
+- Português: README.pt.md
+- English: README.en.md
+- Español: README.es.md
 
-## Repository structure
+Contents
+- About
+- Highlights
+- Prerequisites
+- Installation
+- Quick start
+- Repository structure
+- Data & results
+- Contributing
+- License
+- Contact
 
-- data/: raw and processed datasets
-- results/
-  - saved_models/: trained weights and artifacts (including predictions CSVs)
-  - plots/: figures generated during evaluation
-  - search_results/: feature selection and hyperparameter search reports
-- config/
-  - config.yaml: all project settings (paths, data, training, feature selection, champions)
-- src/
-  - download_dataset.py: builds the full catalog (VizieR + optional cross-matches)
-  - preprocess.py: cleaning, imputation, feature engineering, save processed CSV
-  - train.py: generic training (Baysian and vanilla) for experiments
-  - evaluate.py: evaluate a trained model and save predictions with uncertainty
-  - predict.py: single-sample prediction with uncertainty
-  - baseline.py: linear regression baseline
-  - feature_selection.py: LightGBM-based feature exploration and selection
-  - run_full_optimization.py: stage-1 selection + stage-2 hyperparameter search
-  - plotting.py, publication_plots.py: figure generation utilities
-  - models/: Bayesian layers and architectures
-  - utils/: helpers and training utilities
-- run_pipeline.py: orchestrates preprocess -> train -> evaluate -> baseline -> plots
-- run_champions.py: trains/evaluates the champion models defined in config
-- pyproject.toml / requirements.txt: dependencies
-- LICENSE: MIT
+About
+HydroMassNet contains code to train models, run predictions and evaluate results. Main scripts: train.py, predict.py, evaluate.py. Project code lives under src/.
 
-## Requirements
+Highlights
+- Training and evaluation scripts.
+- Pipeline orchestration (run_pipeline.py).
+- Configuration via config.yaml.
+- Dependencies available in requirements.txt and pyproject.toml.
 
-- Python >= 3.9
-- Poetry (recommended) or pip/venv
-- Optional: GPU with working TensorFlow build
+Prerequisites
+- Python 3.12 (current pinned dependencies target >=3.12).
+- Git.
+- Use virtual environments (venv) or Poetry for reproducible installs.
 
-## Installation
+Installation (venv + pip)
+1. Create and activate venv:
+   python3.12 -m venv .venv
+   source .venv/bin/activate
+2. Install dependencies:
+   pip install -r requirements.txt
 
-- Poetry (recommended)
-  - git clone https://github.com/joelsonsartori/HydroMassNet.git
-  - cd HydroMassNet
-  - poetry install
+Installation (Poetry)
+1. poetry install
 
-- pip
-  - git clone https://github.com/joelsonsartori/HydroMassNet.git
-  - cd HydroMassNet
-  - python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
-  - pip install -r requirements.txt
+Quick start
+- Train:
+  python train.py --config config.yaml
+- Predict:
+  python predict.py --config config.yaml --input data/<your_input>
+- Evaluate:
+  python evaluate.py --predictions results/predictions.csv --targets data/targets.csv
 
-## Configuration
+Notes:
+- Check and adjust config.yaml for data paths, hyperparameters and output paths.
+- Many dependencies (TensorFlow, CatBoost) are heavy — GPU recommended.
 
-The main configuration is kept in config/config.yaml (some scripts also look for ./config.yaml when run from repo root). Key sections:
+Repository structure (summary)
+- README files in three languages.
+- LICENSE — MIT.
+- config.yaml — configuration file.
+- data/ — input datasets.
+- results/ — outputs and artifacts.
+- src/ — source code.
+- train.py, predict.py, evaluate.py — main scripts.
+- run_pipeline.py, run_color_plot.py — utility scripts.
 
-- paths: raw_data, processed_data, saved_models, plots, search_results
-- data_processing: splits and the feature list used to build the processed dataset
-- training: epochs, patience
-- feature_selection: candidate features, min_features, top_n_to_tune
-- champion_models: per-model features and final hyperparameters (bnn, dbnn, vanilla)
+Suggested improvements (prioritized)
+1. Documentation & examples
+   - Add a small example dataset or a script to fetch public sample data.
+   - Provide example outputs and expected file formats.
+2. Setup & dependencies
+   - Offer lightweight dev requirements and a full requirements set.
+   - Consider supporting Python 3.10+ or specify strict reason for 3.12.
+   - Provide a Dockerfile for reproducibility.
+3. Automation & CI
+   - Add GitHub Actions for linting, basic tests and a smoke-run of the pipeline.
+4. Code quality
+   - Move reusable code into src/ packages, expose CLI entrypoints and add argument parsing.
+   - Add unit tests for core functions.
+   - Improve error handling for file I/O and configs.
+5. Data & models
+   - Specify data schema (expected columns and units).
+   - Add model versioning and artifact saving strategy.
+6. Contribution process
+   - Add CONTRIBUTING.md and templates for issues/PRs.
+7. Security
+   - Ensure .gitignore filters datasets/credentials and document data handling.
 
-## Quickstart
+Contributing
+- Open issues for bugs or feature requests.
+- Fork, create a branch and open PRs. Include tests and documentation updates.
 
-1) Build the full catalog (downloads/merges through astroquery)
-- poetry run python src/download_dataset.py
+License
+MIT License — see LICENSE file.
 
-2) Preprocess and feature engineer the dataset
-- poetry run python src/preprocess.py
-
-3) Train + evaluate everything and generate plots (orchestration)
-- poetry run python run_pipeline.py
-
-This runs bnn, dbnn, and vanilla, produces predictions CSVs under results/saved_models, and figures under results/plots.
-
-## Manual usage
-
-- Train a specific model
-  - poetry run python src/train.py --model bnn
-  - poetry run python src/train.py --model dbnn
-  - poetry run python src/train.py --model vanilla
-  - Optional flags:
-    - --learning_rate, --batch_size
-    - --hidden_layers for bnn/vanilla (e.g., 256-128)
-    - --core_layers/--head_layers for dbnn (e.g., 512-256 and 128-64)
-    - --dropout for vanilla
-    - --features "iMAG,e_iMAG,logMsT,..." to override features
-
-- Evaluate a trained model (writes {model}_predictions.csv)
-  - poetry run python src/evaluate.py --model bnn|dbnn|vanilla
-
-- Baseline
-  - poetry run python src/baseline.py
-
-- Plots
-  - Automatically generated by run_pipeline.py (training curves, predictions overview, confidence intervals)
-
-- Predict a single sample with uncertainty
-  - poetry run python src/predict.py --model bnn --input_values <v1 v2 ... vN> --config config/config.yaml
-  - Note: input_values length must match data_processing.features; scaler_x.pkl and scaler_y.pkl are used.
-
-- Full optimization (feature selection + hyperparameter search report)
-  - poetry run python src/run_full_optimization.py
-
-- Champion models (final training/evaluation as per config.champion_models)
-  - poetry run python run_champions.py
-
-## Data and features
-
-- Default target: logMHI
-- Example features (from config): iMAG, e_iMAG, logMsT, logSFR22, e_logMsT, Dist, RVel, Ag, Ai, surface_brightness_proxy
-- A derived proxy surface_brightness_proxy is computed during preprocessing from iMAG and axis ratio b/a
-- Data is saved to data/… CSVs as configured
-
-## Reproducibility
-
-- Global seed configured in YAML (seed: 1601)
-- Config-driven pipelines and deterministic preprocessing where possible
-
-## Results and artifacts
-
-- results/saved_models/: weights (*.weights.h5), predictions CSVs, histories
-- results/plots/: PNG/PDF figures for training metrics and uncertainty visualization
-- results/search_results/: CSV reports for feature selection and optimization
-
-## License
-
-This project is released under the MIT License. See LICENSE for details.
-
-## Citation
-
-If you use HydroMassNet in academic work, please cite the repository. A BibTeX entry will be added here once a preprint is available.
-
-## Acknowledgments
-
-- VizieR, XMatch services via astroquery
-- TensorFlow Probability for Bayesian layers
-- Community libraries: scikit-learn, LightGBM, pandas, matplotlib/seaborn
+Contact
+Repository owner / primary contact: Joelson Sartori Junior (GitHub)
