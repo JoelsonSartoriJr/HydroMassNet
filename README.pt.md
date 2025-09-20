@@ -1,141 +1,108 @@
-# HydroMassNet — Redes Neurais Bayesianas para Massa de Hidrogênio Neutro
+# HydroMassNet
 
-[Português](README.pt.md) | [English](README.en.md) | [Español](README.es.md)
+Bem-vindo ao HydroMassNet!
 
-HydroMassNet é um pipeline de ponta a ponta para estimar a massa de hidrogênio neutro em galáxias (log10(M_HI)) usando Redes Neurais Bayesianas (BNNs). Ele cobre aquisição de dados (catálogos astronômicos), pré-processamento, engenharia de atributos, treinamento/avaliação com incerteza, comparação de modelos e geração de figuras para publicação.
+HydroMassNet é um repositório para experimentos e pipelines de modelagem hidrológica (treinamento, inferência e avaliação). Este README em Português guia você pela instalação, uso rápido e aponta a estrutura do projeto.
 
-- Stack principal: TensorFlow 2.x, TensorFlow Probability, scikit-learn, LightGBM
-- Acesso a dados astronômicos: astroquery (VizieR, XMatch)
-- Configuração reprodutível via YAML
+- Português: README.pt.md
+- English: README.en.md
+- Español: README.es.md
 
-## Estrutura do repositório
+Índice
+- Sobre
+- Destaques
+- Pré-requisitos
+- Instalação
+- Execução rápida
+- Estrutura do repositório
+- Dados e resultados
+- Como contribuir
+- Licença
+- Contato
 
-- data/: datasets brutos e processados
-- results/
-  - saved_models/: pesos treinados e artefatos (inclui CSVs de predições)
-  - plots/: figuras geradas durante a avaliação
-  - search_results/: relatórios de seleção de features e busca de hiperparâmetros
-- config/
-  - config.yaml: configurações do projeto (paths, dados, treino, seleção de features, campeões)
-- src/
-  - download_dataset.py: constrói o catálogo completo (VizieR + cross-match opcional)
-  - preprocess.py: limpeza, imputação, engenharia de atributos e salvamento do CSV processado
-  - train.py: treinamento genérico (bayesianos e vanilla) para experimentos
-  - evaluate.py: avalia um modelo treinado e salva predições com incerteza
-  - predict.py: predição de uma amostra com incerteza
-  - baseline.py: baseline de regressão linear
-  - feature_selection.py: exploração/seleção de features com LightGBM
-  - run_full_optimization.py: estágio 1 (seleção) + estágio 2 (busca de hiperparâmetros)
-  - plotting.py, publication_plots.py: utilitários de plotagem
-  - models/: camadas e arquiteturas Bayesianas
-  - utils/: utilitários auxiliares
-- run_pipeline.py: orquestra preprocess -> train -> evaluate -> baseline -> plots
-- run_champions.py: treina/avalia os modelos campeões definidos no config
-- pyproject.toml / requirements.txt: dependências
-- LICENSE: MIT
+Sobre
+HydroMassNet reúne código para treinar modelos, gerar previsões e avaliar resultados. O repositório contém scripts principais (train.py, predict.py, evaluate.py), pipelines (run_pipeline.py) e utilitários em src/.
 
-## Requisitos
+Destaques
+- Scripts para treinar e avaliar modelos (train.py, evaluate.py).
+- Scripts de execução e visualização (run_pipeline.py, run_color_plot.py).
+- Suporte a configuração via config.yaml.
+- Dependências listadas em requirements.txt e pyproject.toml.
 
-- Python >= 3.9
-- Poetry (recomendado) ou pip/venv
-- Opcional: GPU com TensorFlow configurado
+Pré-requisitos
+- Python 3.12 (as dependências atuais foram travadas para >=3.12).
+- Git
+- Recomenda-se uso de ambiente virtual (venv) ou Poetry.
 
-## Instalação
+Instalação (exemplo com venv + pip)
+1. Criar e ativar venv:
+   python3.12 -m venv .venv
+   source .venv/bin/activate  # Linux/macOS
+   .venv\Scripts\activate     # Windows
+2. Instalar dependências:
+   pip install -r requirements.txt
 
-- Poetry (recomendado)
-  - git clone https://github.com/joelsonsartori/HydroMassNet.git
-  - cd HydroMassNet
-  - poetry install
+Instalação (com Poetry)
+1. poetry install
 
-- pip
-  - git clone https://github.com/joelsonsartori/HydroMassNet.git
-  - cd HydroMassNet
-  - python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
-  - pip install -r requirements.txt
+Execução rápida
+- Treinar:
+  python train.py --config config.yaml
+- Prever:
+  python predict.py --config config.yaml --input data/<sua_entrada>
+- Avaliar:
+  python evaluate.py --predictions results/predictions.csv --targets data/targets.csv
 
-## Configuração
+Observações:
+- Verifique/edite config.yaml para caminhos de dados, hiperparâmetros e saída.
+- Alguns pacotes no requirements.txt são pesados (TensorFlow, CatBoost etc.). Utilize GPU se disponível.
 
-A configuração principal está em config/config.yaml (alguns scripts também procuram ./config.yaml quando executados na raiz). Seções principais:
+Estrutura do repositório (resumo)
+- README.md, README.pt.md, README.en.md, README.es.md — Documentação em 3 idiomas.
+- LICENSE — MIT License.
+- config.yaml — Arquivo de configuração (parâmetros e caminhos).
+- data/ — Dados brutos e exemplos (não acompanham dados sensíveis).
+- results/ — Artefatos gerados (modelos, previsões, plots).
+- src/ — Código fonte e utilitários.
+- train.py — Script de treinamento.
+- predict.py — Script de inferência.
+- evaluate.py — Script de avaliação.
+- run_pipeline.py — Orquestração de pipeline.
+- run_color_plot.py — Geração de visualizações.
 
-- paths: raw_data, processed_data, saved_models, plots, search_results
-- data_processing: divisões de validação/teste e a lista de features do dataset processado
-- training: epochs, patience
-- feature_selection: features candidatas, min_features, top_n_to_tune
-- champion_models: features por modelo e hiperparâmetros finais (bnn, dbnn, vanilla)
+Recomendações e melhorias (priorizadas)
+1. Documentação e exemplos
+   - Adicionar um exemplo mínimo de dataset (ou um script para baixar dados públicos).
+   - Incluir comandos concretos e exemplos de saída esperada (ex.: amostra de results/predictions.csv).
+2. Setup e dependências
+   - Fornecer um requirements leve para desenvolvimento/testing e outro para produção (full).
+   - Considerar suportar Python 3.10+ ou documentar claramente a necessidade de 3.12.
+   - Incluir um Dockerfile para reprodução do ambiente.
+3. Automação e CI
+   - Adicionar GitHub Actions para:
+     - Testes unitários/linters (flake8/ruff, black).
+     - Validar instalação e execução de pipeline simples.
+4. Código e qualidade
+   - Mover scripts utilitários para src/ e transformar scripts em entrypoints com argumentos bem definidos (usar argparse / hydra / pydantic).
+   - Adicionar testes unitários básicos para funções críticas.
+   - Validar e tratar erros de I/O (paths inexistentes, formatos inválidos).
+5. Dados e modelos
+   - Especificar formato esperado dos dados (colunas, unidades).
+   - Adicionar rotina para salvar/serializar modelos e versão dos pesos (com hash/versão).
+6. Licença e contribuições
+   - Já existe LICENSE (MIT) — documentar no README como aceitar contribuições (CONTRIBUTING.md).
+7. Segurança e privacidade
+   - Garantir que dados sensíveis não sejam comitados (adicionar regras ao .gitignore e instruções).
 
-## Início rápido
+Como contribuir
+- Abra issues descrevendo bugs ou novas funcionalidades.
+- Faça fork, crie branch feature/xyz e envie PRs com descrição clara e testes quando aplicável.
+- Adicione documentação para qualquer mudança que impacte uso/instalação.
 
-1) Construir o catálogo completo (download/merge via astroquery)
-- poetry run python src/download_dataset.py
+Licença
+Projeto licenciado sob MIT License — ver arquivo LICENSE.
 
-2) Pré-processar e engenhar features
-- poetry run python src/preprocess.py
+Contato
+Autor principal: Joelson Sartori Junior (ver perfil do GitHub)
 
-3) Treinar + avaliar tudo e gerar plots (orquestração)
-- poetry run python run_pipeline.py
-
-Isso roda bnn, dbnn e vanilla, gera CSVs de predições em results/saved_models e figuras em results/plots.
-
-## Uso manual
-
-- Treinar um modelo específico
-  - poetry run python src/train.py --model bnn
-  - poetry run python src/train.py --model dbnn
-  - poetry run python src/train.py --model vanilla
-  - Flags opcionais:
-    - --learning_rate, --batch_size
-    - --hidden_layers para bnn/vanilla (ex.: 256-128)
-    - --core_layers/--head_layers para dbnn (ex.: 512-256 e 128-64)
-    - --dropout para vanilla
-    - --features "iMAG,e_iMAG,logMsT,..." para sobrescrever as features
-
-- Avaliar um modelo treinado (gera {model}_predictions.csv)
-  - poetry run python src/evaluate.py --model bnn|dbnn|vanilla
-
-- Baseline
-  - poetry run python src/baseline.py
-
-- Plots
-  - Gerados automaticamente por run_pipeline.py (históricos, comparação de predições e intervalos de confiança)
-
-- Predizer uma amostra com incerteza
-  - poetry run python src/predict.py --model bnn --input_values <v1 v2 ... vN> --config config/config.yaml
-  - Obs.: input_values deve ter o mesmo comprimento de data_processing.features; usa scaler_x.pkl e scaler_y.pkl.
-
-- Otimização completa (seleção de features + busca de hiperparâmetros)
-  - poetry run python src/run_full_optimization.py
-
-- Modelos campeões (treino/avaliação finais conforme config.champion_models)
-  - poetry run python run_champions.py
-
-## Dados e features
-
-- Alvo padrão: logMHI
-- Exemplo de features (do config): iMAG, e_iMAG, logMsT, logSFR22, e_logMsT, Dist, RVel, Ag, Ai, surface_brightness_proxy
-- O proxy surface_brightness_proxy é derivado no pré-processamento a partir de iMAG e razão de eixos b/a
-- Dados salvos em CSVs sob data/ conforme configurado
-
-## Reprodutibilidade
-
-- Semente global no YAML (seed: 1601)
-- Pipelines guiados por configuração e pré-processamento determinístico sempre que possível
-
-## Resultados e artefatos
-
-- results/saved_models/: pesos (*.weights.h5), CSVs de predições, históricos
-- results/plots/: figuras PNG/PDF de métricas de treino e visualização de incerteza
-- results/search_results/: relatórios CSV de seleção de features e otimização
-
-## Licença
-
-Projeto licenciado sob MIT. Veja LICENSE para detalhes.
-
-## Citação
-
-Se usar o HydroMassNet em trabalhos acadêmicos, por favor cite este repositório. Um BibTeX será adicionado quando houver preprint.
-
-## Agradecimentos
-
-- Serviços VizieR e XMatch via astroquery
-- TensorFlow Probability para camadas Bayesianas
-- Bibliotecas da comunidade: scikit-learn, LightGBM, pandas, matplotlib/seaborn
+Obrigado por usar/avaliar o HydroMassNet! Contribuições são bem-vindas.
