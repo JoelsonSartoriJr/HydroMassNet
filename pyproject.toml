@@ -8,9 +8,19 @@ license = "MIT"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-tensorflow = { version = "^2.16.1", extras = ["and-cuda"] }
-tensorflow-probability = {version = "^0.24.0", extras = ["tf"]}
+python = ">=3.10,<3.13"
+
+# TensorFlow — instala versão com CUDA apenas em ambientes Linux x86_64 com GPU NVIDIA
+tensorflow = [
+  { version = "^2.16.1", extras = ["and-cuda"], markers = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+  { version = "^2.16.1", markers = "sys_platform != 'linux' or platform_machine != 'x86_64'" }
+]
+
+# TensorFlow Probability sempre compatível com CPU e GPU
+tensorflow-probability = "^0.24.0"
+
+# Demais dependências
+astropy = "^6.1.0"
 scikit-learn = "^1.5.0"
 pandas = "^2.2.2"
 matplotlib = "^3.9.0"
@@ -19,6 +29,7 @@ astroquery = "^0.4.7"
 tqdm = "^4.66.4"
 pyyaml = "^6.0.1"
 lightgbm = "^4.6.0"
+tf-keras = "^2.20.1"
 
 [build-system]
 requires = ["poetry-core"]

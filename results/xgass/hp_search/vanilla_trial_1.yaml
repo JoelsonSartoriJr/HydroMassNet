@@ -1,0 +1,80 @@
+project_name: HydroMassNet-xGASS
+seed: 42
+target_column: lgMHI
+paths:
+  raw_data: data/xGASS_representative_sample.fits
+  processed_data: data/xgass_processed.csv
+  results: results/xgass/hp_search/vanilla_trial_1/results
+  plots: results/xgass/hp_search/vanilla_trial_1/plots
+  models: results/xgass/hp_search/vanilla_trial_1/models
+data_processing:
+  val_split: 0.2
+  test_split: 0.1
+  sentinel_values:
+  - -99.0
+  - -99.99
+training:
+  epochs: 400
+  patience: 20
+  evaluation_samples: 100
+hyperparameter_search:
+  enabled: true
+  max_trials: 4
+  metric: val_loss
+  work_dir: results/xgass/hp_search/
+  output_config: results/xgass/config_optimized.yaml
+models:
+  bnn:
+    type: bnn
+    features:
+    - lgMstar
+    - NUVr
+    - lgmust
+    - lgSFR_tot_median
+    - W50cor
+    - INCL
+    - lvir_ratB
+    learning_rate: 0.0005
+    batch_size: 128
+    hidden_layers:
+    - 256
+    - 128
+    - 64
+  dbnn:
+    type: dbnn
+    features:
+    - lgMstar
+    - NUVr
+    - lgmust
+    - lgSFR_tot_median
+    - W50cor
+    learning_rate: 0.0005
+    batch_size: 128
+    core_layers:
+    - 512
+    - 256
+    head_layers:
+    - 64
+    - 32
+  vanilla:
+    type: vanilla
+    features:
+    - lgMstar
+    - NUVr
+    - lgmust
+    - lgSFR_tot_median
+    - W50cor
+    - INCL
+    learning_rate: 0.0005
+    batch_size: 128
+    hidden_layers:
+    - 256
+    - 128
+    - 64
+    dropout: 0.3
+  baseline:
+    type: baseline
+    features:
+    - lgMstar
+    - NUVr
+    - lgSFR_tot_median

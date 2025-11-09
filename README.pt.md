@@ -46,12 +46,26 @@ Instalação (com Poetry)
 1. poetry install
 
 Execução rápida
-- Treinar:
-  python train.py --config config.yaml
-- Prever:
-  python predict.py --config config.yaml --input data/<sua_entrada>
-- Avaliar:
-  python evaluate.py --predictions results/predictions.csv --targets data/targets.csv
+- Instale as dependências (venv/Pip ou Poetry) e garanta que os arquivos em `data/` estão disponíveis.
+- Escolha o pipeline:
+
+  1. **Dataset HydroMassNet (CSV processado)**
+     ```bash
+     poetry run python main_hydromass.py --config config.yaml
+     ```
+     O script cuida do pré-processamento (se necessário), treina todos os modelos e salva resultados em `results/`.
+
+  2. **Dataset xGASS (catálogo FITS)**
+     ```bash
+     poetry run python main_xgass.py --config config_xgass.yaml
+     ```
+     Ele lê `data/xGASS_representative_sample.fits`, gera `data/xgass_processed.csv`, treina/valida os modelos definidos em `config_xgass.yaml` e cria gráficos exploratórios em `results/xgass/plots`.
+     Antes do treinamento final é executada uma busca em grade utilizando a mesma variedade de hiperparâmetros (learning rates, batch sizes e tamanhos de camadas) para todos os modelos, com a configuração otimizada sendo salva em `results/xgass/config_optimized.yaml`. Ajuste o bloco `hyperparameter_search` dentro de `config_xgass.yaml` para mudar o número de tentativas ou diretórios de saída.
+
+- Comandos úteis isolados:
+  - Re-treinar apenas um modelo: `poetry run python train.py --model vanilla --config config_xgass.yaml`
+  - Somente avaliar: `poetry run python evaluate.py --model vanilla --config config_xgass.yaml`
+  - Fazer uma predição única (após o treino): `poetry run python predict.py --model vanilla --input_values …`
 
 Observações:
 - Verifique/edite config.yaml para caminhos de dados, hiperparâmetros e saída.
